@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solve — Logicdle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <div>
+      <p class="site-title"><a href="/index.html">Logicdle</a></p>
+      <p class="site-tagline" id="puzzle-subtitle">One puzzle a day.</p>
+    </div>
+    <nav class="site-nav" id="user-nav"></nav>
+  </header>
+
+  <div class="pad-head" style="margin-bottom: 6px;">
+    <div>
+      <h1 id="puzzle-title" style="font-family: var(--font-display); font-size: clamp(1.4rem, 3vw, 1.9rem); margin: 0 0 6px;">Loading…</h1>
+      <div class="pad-meta">
+        <span id="meta-date">—</span>
+        <span id="meta-type">—</span>
+        <span id="meta-difficulty">—</span>
+        <span id="meta-author">—</span>
+      </div>
+    </div>
+    <div class="stamp stamp-solved" id="solved-stamp" hidden>Solved</div>
+  </div>
+
+  <div class="solve-toolbar">
+    <a href="/archive.html" class="btn">← Archive</a>
+    <div class="timer" id="timer">0:00</div>
+    <button class="btn" id="reset-btn">Reset board</button>
+  </div>
+
+  <div id="extras-block" hidden>
+    <div id="extras-body" class="rules-body"></div>
+    <div id="extras-images" class="rules-images"></div>
+  </div>
+
+  <div class="penpa-frame-shell" id="frame-shell">
+    <div class="penpa-loading" id="frame-loading">setting up the grid…</div>
+  </div>
+
+  <div class="text-puzzle-block" id="text-puzzle-block" hidden></div>
+
+  <div class="solve-strip">
+    <div class="solve-status" id="solve-status">
+      <span class="dot"></span>
+      <span id="solve-status-text">Not started</span>
+    </div>
+    <button class="btn btn-primary" id="manual-solve-btn" hidden>I've solved it</button>
+  </div>
+
+  <div class="solved-banner" id="solved-banner" hidden>
+    <p id="banner-heading" style="margin: 0 0 6px; font-weight: 600; color: var(--correct);"></p>
+    <p id="banner-time-line" style="margin: 0 0 4px;"></p>
+    <p id="banner-streak-line" style="margin: 0 0 12px;"></p>
+    <button class="btn" id="banner-copy-btn">Copy stats</button>
+  </div>
+
+  <div id="rules-block" style="margin-top: 34px;">
+    <h2 style="font-family: var(--font-display); font-size: 1.3rem; margin: 0 0 12px;">Rules</h2>
+    <div id="rules-body" class="rules-body">Loading rules…</div>
+    <div id="rules-images" class="rules-images"></div>
+  </div>
+
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/solve-detect.js"></script>
+<script>
+(function () {
+  var puzzleId = new URLSearchParams(location.search).get("puzzle");
+  var frameShell = document.getElementById("frame-shell");
+  var loadingEl = document.getElementById("frame-loading");
+  var timerEl = document.getElementById("timer");
+  var statusEl = document.getElementById("solve-status");
+  var statusText = document.getElementById("solve-status-text");
+  var resetBtn = document.getElementById("reset-btn");
+  var solvedStamp = document.getElementById("solved-stamp");
+  var textPuzzleBlock = document.getElementById("text-puzzle-block");
+  var manualSolveBtn = document.getElementById("manual-solve-btn");
+
+  var solvedBanner = document.getElementById("solved-banner");
+  var bannerHeading = document.getElementById("banner-heading");
+  var bannerTimeLine = document.getElementById("banner-time-line");
+  var bannerStreakLine = document.getElementById("banner-streak-line");
+  var bannerCopyBtn = document.getElementById("banner-copy-btn");
+
+  if (!puzzleId) {
+    frameShell.innerHTML = '<div class="notice">No puzzle specified. Go back to the <a href="/archive.html">archive</a>.</div>';
+    resetBtn.hidden = true;
+    return;
+  }
+
+  function formatMs(ms) {
+    if (!ms && ms !== 0) return "—";
+    var totalSec = Math.round(ms / 1000);
+    return Math.floor(totalSec / 60) + ":" + String(totalSec % 60).padStart(2, "0");
+  }
+
+  // ---- timer -----------------------------------------------------------
+  var timerInterval = null;
+  function startTimer(startedAtIso) {
+    var startMs = new Date(startedAtIso).getTime();
+    function tick() {
+      timerEl.textContent = formatMs(Math.max(0, Date.now() - startMs));
+    }
+    tick();
+    timerInterval = setInterval(tick, 1000);
+  }
+  function stopTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerEl.classList.add("is-stopped");
+  }
+
+  // ---- rendering rules / extras -----------------------------------------
+  function renderContentBlock(bodyEl, imagesEl, content) {
+    var text = (content && content.text) || "";
+    bodyEl.textContent = text;
+    imagesEl.innerHTML = "";
+    ((content && content.images) || []).forEach(function (src) {
+      var img = document.createElement("img");
+      img.src = src;
+      img.alt = "";
+      imagesEl.appendChild(img);
+    });
+  }
+
+  // ---- iframe: no scrollbars, auto-sized to content ---------------------
+  // Same-origin (self-hosted penpa-edit), so we can reach into the framed
+  // document and both hide its internal scrollbar and size the iframe to
+  // match its content instead of clipping it.
+  function fitIframeToContent(iframeEl) {
+    try {
+      var doc = iframeEl.contentDocument;
+      if (!doc) return;
+      if (!doc.getElementById("__no_scroll_style__")) {
+        var style = doc.createElement("style");
+        style.id = "__no_scroll_style__";
+        style.textContent = "html,body{overflow:hidden !important;}";
+        doc.head.appendChild(style);
+      }
+      function resize() {
+        var h = Math.max(
+          doc.documentElement ? doc.documentElement.scrollHeight : 0,
+          doc.body ? doc.body.scrollHeight : 0
+        );
+        if (h) iframeEl.style.height = h + "px";
+      }
+      resize();
+      var win = doc.defaultView;
+      if (win && "ResizeObserver" in win && doc.body) {
+        var ro = new win.ResizeObserver(resize);
+        ro.observe(doc.body);
+      } else {
+        setTimeout(resize, 300);
+        setTimeout(resize, 1000);
+      }
+    } catch (e) {
+      /* not same-origin (e.g. penpa-edit not self-hosted yet) — nothing more we can do */
+    }
+  }
+
+  // ---- solved banner (inline, not a popup) --------------------------------
+  function showSolvedBanner(data) {
+    bannerHeading.textContent = data.alreadyRecorded ? "Solved again!" : "Solved!";
+    bannerTimeLine.textContent = data.alreadyRecorded
+      ? "Your recorded time: " + formatMs(data.completion.timeMs) + " (this replay didn't change it)"
+      : "Solved in " + formatMs(data.completion.timeMs);
+    bannerStreakLine.textContent = data.stats
+      ? "🔥 " + data.stats.streak + " day streak · " + data.stats.totalSolved + " solved total"
+      : "";
+    solvedBanner.hidden = false;
+
+    bannerCopyBtn.onclick = function () {
+      var lines = [
+        "Logicdle — " + data.puzzleTitle + " (" + data.puzzleDate + ")",
+        "⏱ " + formatMs(data.completion.timeMs),
+      ];
+      if (data.stats) lines.push("🔥 " + data.stats.streak + " day streak · " + data.stats.totalSolved + " solved total");
+      var text = lines.join("\n");
+      navigator.clipboard.writeText(text).then(function () {
+        bannerCopyBtn.textContent = "Copied!";
+        setTimeout(function () { bannerCopyBtn.textContent = "Copy stats"; }, 1500);
+      }).catch(function () {
+        bannerCopyBtn.textContent = "Couldn't copy";
+      });
+    };
+  }
+
+  // ---- reporting a solve to the server -----------------------------------
+  function reportComplete(auto) {
+    Api.post("/api/puzzles/" + encodeURIComponent(puzzleId) + "/complete", { auto: auto })
+      .then(function (res) {
+        statusEl.className = "solve-status is-solved";
+        statusText.textContent = "Solved";
+        solvedStamp.hidden = false;
+        manualSolveBtn.hidden = true;
+        stopTimer();
+        showSolvedBanner(res);
+      })
+      .catch(function (err) {
+        statusText.textContent = "Couldn't save progress: " + err.message;
+        manualSolveBtn.disabled = false;
+      });
+  }
+
+  // ---- building/reloading the puzzle iframe ------------------------------
+  var currentIframe = null;
+  function createIframe(play) {
+    var iframe = document.createElement("iframe");
+    iframe.title = "penpa-edit puzzle solver";
+    iframe.setAttribute("scrolling", "no");
+    iframe.src = "/penpa-edit/#" + play.penpaShare;
+    iframe.addEventListener("load", function () {
+      if (loadingEl.parentNode) loadingEl.parentNode.removeChild(loadingEl);
+      fitIframeToContent(iframe);
+      var hooked = attachSolveDetection(iframe, play.successMessage, function () {
+        reportComplete(true);
+      });
+      if (!hooked && !play.alreadySolved) {
+        statusEl.className = "solve-status";
+        statusText.textContent = "Couldn't set up automatic detection — is penpa-edit self-hosted at /penpa-edit/?";
+      }
+    });
+    frameShell.innerHTML = "";
+    frameShell.appendChild(iframe);
+    currentIframe = iframe;
+    currentIframe.__play = play;
+  }
+
+  resetBtn.addEventListener("click", function () {
+    if (!currentIframe) return;
+    if (!confirm("Reset the board? Your timer isn't affected — this just clears what you've entered so you can start the grid over.")) return;
+    try { currentIframe.contentWindow.localStorage.clear(); } catch (e) { /* not same-origin */ }
+    var play = currentIframe.__play;
+    var l = document.createElement("div");
+    l.className = "penpa-loading";
+    l.textContent = "resetting…";
+    frameShell.appendChild(l);
+    createIframe(play);
+  });
+
+  function begin(meta, play) {
+    document.getElementById("puzzle-subtitle").textContent = meta.title;
+    document.getElementById("puzzle-title").textContent = meta.title;
+    document.getElementById("meta-date").textContent = meta.date;
+    document.getElementById("meta-type").textContent = meta.type;
+    document.getElementById("meta-difficulty").textContent = meta.difficulty;
+    document.getElementById("meta-author").textContent = "by " + meta.author;
+    document.title = meta.title + " — Logicdle";
+
+    if (meta.extras && (meta.extras.text || (meta.extras.images && meta.extras.images.length))) {
+      document.getElementById("extras-block").hidden = false;
+      renderContentBlock(document.getElementById("extras-body"), document.getElementById("extras-images"), meta.extras);
+    }
+    renderContentBlock(document.getElementById("rules-body"), document.getElementById("rules-images"), meta.rules);
+
+    var hasPenpa = !!play.penpaShare;
+
+    if (play.alreadySolved) {
+      solvedStamp.hidden = false;
+      statusEl.className = "solve-status is-solved";
+      statusText.textContent = "Already solved — practice mode";
+      timerEl.textContent = formatMs(play.timeMs);
+      timerEl.classList.add("is-stopped");
+    } else {
+      startTimer(play.startedAt);
+      statusEl.className = "solve-status is-watching";
+      statusText.textContent = hasPenpa ? "Watching for a correct answer…" : "Mark it solved once you're done";
+    }
+
+    if (hasPenpa) {
+      createIframe(play);
+    } else {
+      // No penpa link for this puzzle — show its plain-text content
+      // instead of the grid. There's no way to automatically detect a
+      // solve without an interactive grid, so this is the one case
+      // where a manual "I've solved it" button makes sense — it isn't
+      // redundant with automatic checking here, since there IS no
+      // automatic checking possible for this puzzle.
+      frameShell.hidden = true;
+      resetBtn.hidden = true;
+      textPuzzleBlock.hidden = false;
+      textPuzzleBlock.textContent = play.textPuzzle || "(No puzzle content was provided.)";
+      if (!play.alreadySolved) {
+        manualSolveBtn.hidden = false;
+        manualSolveBtn.addEventListener("click", function () {
+          manualSolveBtn.disabled = true;
+          reportComplete(false);
+        });
+      }
+    }
+  }
+
+  var cached = sessionStorage.getItem("play:" + puzzleId);
+  var playPromise = cached
+    ? Promise.resolve(JSON.parse(cached))
+    : Api.post("/api/puzzles/" + encodeURIComponent(puzzleId) + "/play");
+
+  Promise.all([
+    Api.get("/api/puzzles/" + encodeURIComponent(puzzleId)),
+    playPromise,
+  ])
+    .then(function (results) {
+      begin(results[0].puzzle, results[1]);
+    })
+    .catch(function (err) {
+      if (err.status === 401) {
+        location.href = "/login.html?next=" + encodeURIComponent(location.pathname + location.search);
+        return;
+      }
+      frameShell.innerHTML = '<div class="notice">' + err.message + "</div>";
+      resetBtn.hidden = true;
+    });
+})();
+</script>
+</body>
+</html>

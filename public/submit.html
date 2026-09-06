@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Submit a puzzle — Logicdle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <div>
+      <p class="site-title"><a href="/index.html">Logicdle</a></p>
+      <p class="site-tagline">One puzzle a day.</p>
+    </div>
+    <nav class="site-nav" id="user-nav"></nav>
+  </header>
+
+  <div id="signed-out-notice" hidden class="notice">
+    <a href="/login.html?next=/submit.html">Sign in</a> to submit a puzzle.
+  </div>
+
+  <div id="submit-ui" hidden>
+    <h1 style="font-family: var(--font-display); font-size: clamp(1.6rem, 3.6vw, 2.2rem); margin: 8px 0 6px;">
+      Submit a puzzle
+    </h1>
+    <p class="archive-intro">
+      An admin reviews every submission before it's published — you'll see their
+      decision and any comments below once it's been looked at. There's no date
+      field here on purpose: the admin sets the release date when they accept it.
+    </p>
+
+    <div class="admin-card" style="margin-bottom: 32px;">
+      <form class="auth-form" id="submit-form">
+        <div class="field">
+          <label for="f-title">Title</label>
+          <input id="f-title" required placeholder="Fillomino No. 42">
+        </div>
+        <div class="field">
+          <label for="f-type">Puzzle type</label>
+          <input id="f-type" required placeholder="Fillomino">
+        </div>
+        <div class="field">
+          <label for="f-difficulty">Difficulty</label>
+          <select id="f-difficulty" required>
+            <option value="">Select…</option>
+            <option>Easy</option>
+            <option>Medium</option>
+            <option>Hard</option>
+            <option>Insane</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-author">Author (credited on the puzzle)</label>
+          <input id="f-author" required>
+        </div>
+        <div class="field">
+          <label for="f-share">Penpa share string (optional if you fill in the text description below instead)</label>
+          <textarea id="f-share" rows="3" placeholder="Everything after the &quot;#&quot; in penpa's URL with answer check"></textarea>
+        </div>
+        <div class="field">
+          <label for="f-text-puzzle">Text puzzle description (optional if you provide a Penpa share string above)</label>
+          <textarea id="f-text-puzzle" rows="4" placeholder="Describe the puzzle in words if you don't have a penpa link — e.g. for puzzle types penpa doesn't support well yet."></textarea>
+        </div>
+        <div class="field">
+          <label for="f-success">Success message (only used if you provided a Penpa link)</label>
+          <input id="f-success" value="Congratulations">
+        </div>
+        <div class="field">
+          <label for="f-extras">Extra content (shown above the puzzle)</label>
+          <textarea id="f-extras" rows="3"></textarea>
+        </div>
+        <div class="field">
+          <label for="f-extras-image">Extra content images</label>
+          <input id="f-extras-image" type="file" accept="image/*">
+          <div class="thumb-row" id="extras-thumb-row"></div>
+        </div>
+        <div class="field">
+          <label for="f-rules">Rules text</label>
+          <textarea id="f-rules" rows="6" placeholder="Shade some cells so that..."></textarea>
+        </div>
+        <div class="field">
+          <label for="f-image">Rule images</label>
+          <input id="f-image" type="file" accept="image/*">
+          <div class="thumb-row" id="thumb-row"></div>
+        </div>
+        <div class="field">
+          <label for="f-comment">Note for the admin (optional)</label>
+          <textarea id="f-comment" rows="2" placeholder="Anything you'd like the reviewer to know"></textarea>
+        </div>
+        <p class="form-error" id="form-error"></p>
+        <button class="btn btn-primary" type="submit">Submit for review</button>
+      </form>
+    </div>
+
+    <h2 style="font-family: var(--font-display); font-size: 1.4rem; margin: 0 0 14px;">Your submissions</h2>
+    <div id="my-submissions"></div>
+  </div>
+
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+(function () {
+  Api.get("/api/auth/me").then(function (res) {
+    if (!res.user) {
+      document.getElementById("signed-out-notice").hidden = false;
+      return;
+    }
+    document.getElementById("submit-ui").hidden = false;
+    document.getElementById("f-author").value = res.user.username;
+    initSubmitPage();
+  });
+
+  function initSubmitPage() {
+    var form = document.getElementById("submit-form");
+    var errorEl = document.getElementById("form-error");
+    var thumbRow = document.getElementById("thumb-row");
+    var extrasThumbRow = document.getElementById("extras-thumb-row");
+    var rulesImages = [];
+    var extrasImages = [];
+
+    function makeThumbRenderer(container, list) {
+      function draw() {
+        container.innerHTML = "";
+        list.forEach(function (url, idx) {
+          var div = document.createElement("div");
+          div.className = "thumb";
+          div.innerHTML = '<img src="' + url + '" alt=""><button type="button" title="Remove">×</button>';
+          div.querySelector("button").addEventListener("click", function () {
+            list.splice(idx, 1);
+            draw();
+          });
+          container.appendChild(div);
+        });
+      }
+      return draw;
+    }
+    var drawRulesThumbs = makeThumbRenderer(thumbRow, rulesImages);
+    var drawExtrasThumbs = makeThumbRenderer(extrasThumbRow, extrasImages);
+
+    function wireUpload(inputId, list, redraw) {
+      document.getElementById(inputId).addEventListener("change", function (e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        var body = new FormData();
+        body.append("image", file);
+        // Any signed-in user can upload images for their own submission
+        // via this endpoint (unlike the admin-only /api/admin/images).
+        fetch("/api/submissions/images", { method: "POST", credentials: "same-origin", body: body })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data.error) throw new Error(data.error);
+            list.push(data.url);
+            redraw();
+            e.target.value = "";
+          })
+          .catch(function (err) { errorEl.textContent = "Image upload failed: " + err.message; });
+      });
+    }
+    wireUpload("f-image", rulesImages, drawRulesThumbs);
+    wireUpload("f-extras-image", extrasImages, drawExtrasThumbs);
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      errorEl.textContent = "";
+      var payload = {
+        title: document.getElementById("f-title").value.trim(),
+        type: document.getElementById("f-type").value.trim(),
+        difficulty: document.getElementById("f-difficulty").value,
+        author: document.getElementById("f-author").value.trim(),
+        penpaShare: document.getElementById("f-share").value.trim(),
+        textPuzzle: document.getElementById("f-text-puzzle").value.trim(),
+        successMessage: document.getElementById("f-success").value.trim() || "Congratulations",
+        rulesText: document.getElementById("f-rules").value,
+        rulesImages: rulesImages,
+        extrasText: document.getElementById("f-extras").value,
+        extrasImages: extrasImages,
+        comment: document.getElementById("f-comment").value.trim(),
+      };
+      Api.post("/api/submissions", payload)
+        .then(function () {
+          form.reset();
+          document.getElementById("f-author").value = document.getElementById("f-author").defaultValue;
+          rulesImages.length = 0; extrasImages.length = 0;
+          drawRulesThumbs(); drawExtrasThumbs();
+          loadMine();
+        })
+        .catch(function (err) { errorEl.textContent = err.message; });
+    });
+
+    function statusBadge(status) {
+      var label = status.charAt(0).toUpperCase() + status.slice(1);
+      return '<span class="status-badge status-' + status + '">' + label + "</span>";
+    }
+
+    function renderComments(sub, container) {
+      container.innerHTML = "";
+      (sub.comments || []).forEach(function (c) {
+        var div = document.createElement("div");
+        div.className = "comment" + (c.isAdmin ? " is-admin" : "");
+        div.innerHTML =
+          '<div class="who">' + escapeHtml(c.authorUsername) + (c.isAdmin ? " (admin)" : "") + "</div>" +
+          "<div>" + escapeHtml(c.text) + "</div>";
+        container.appendChild(div);
+      });
+    }
+
+    function loadMine() {
+      var listEl = document.getElementById("my-submissions");
+      Api.get("/api/submissions/mine").then(function (res) {
+        listEl.innerHTML = "";
+        if (!res.submissions.length) {
+          listEl.innerHTML = '<p class="form-note">Nothing submitted yet.</p>';
+          return;
+        }
+        res.submissions.forEach(function (sub) {
+          var card = document.createElement("div");
+          card.className = "submission-card";
+          card.innerHTML =
+            '<div class="submission-head">' +
+              '<div><div class="t">' + escapeHtml(sub.title) + "</div>" +
+              '<div class="submission-meta">' + escapeHtml(sub.type) + " · " + escapeHtml(sub.difficulty) + "</div></div>" +
+              statusBadge(sub.status) +
+            "</div>" +
+            (sub.status !== "pending"
+              ? '<div class="submission-meta" style="margin-top:8px;">Reviewed by ' + escapeHtml(sub.reviewedBy || "an admin") + "</div>"
+              : "") +
+            '<div class="comment-thread" data-comments></div>' +
+            '<form class="comment-form" data-comment-form>' +
+              '<input type="text" placeholder="Add a comment…" required>' +
+              '<button class="btn" type="submit">Send</button>' +
+            "</form>";
+
+          renderComments(sub, card.querySelector("[data-comments]"));
+
+          card.querySelector("[data-comment-form]").addEventListener("submit", function (e) {
+            e.preventDefault();
+            var input = e.target.querySelector("input");
+            var text = input.value.trim();
+            if (!text) return;
+            Api.post("/api/submissions/" + encodeURIComponent(sub.id) + "/comments", { text: text })
+              .then(function (res2) {
+                input.value = "";
+                renderComments(res2.submission, card.querySelector("[data-comments]"));
+              })
+              .catch(function (err) { alert(err.message); });
+          });
+
+          listEl.appendChild(card);
+        });
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+
+    loadMine();
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leaderboards — Logicdle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <div>
+      <p class="site-title"><a href="/index.html">Logicdle</a></p>
+      <p class="site-tagline">One puzzle a day.</p>
+    </div>
+    <nav class="site-nav" id="user-nav"></nav>
+  </header>
+
+  <div id="signed-out-notice" hidden class="notice">
+    <a href="/login.html?next=/leaderboards.html">Sign in</a> to create or join a leaderboard.
+  </div>
+
+  <div id="leaderboards-ui" hidden>
+    <h1 style="font-family: var(--font-display); font-size: clamp(1.6rem, 3.6vw, 2.2rem); margin: 8px 0 6px;">
+      Leaderboards
+    </h1>
+    <p class="archive-intro">
+      Create a private leaderboard and share its code with friends, or join one you've
+      been invited to. Scoring works like Advent of Code's local leaderboards: for each
+      puzzle, whoever in your group solved it earliest gets the most points, down to 1
+      point for last place — summed across every puzzle.
+    </p>
+
+    <div class="admin-grid" style="margin-bottom: 32px;">
+      <div class="admin-card">
+        <h2>Create a leaderboard</h2>
+        <form class="auth-form" id="create-form">
+          <div class="field">
+            <label for="c-name">Name</label>
+            <input id="c-name" required placeholder="Office Puzzlers">
+          </div>
+          <p class="form-error" id="create-error"></p>
+          <button class="btn btn-primary" type="submit">Create</button>
+        </form>
+      </div>
+
+      <div class="admin-card">
+        <h2>Join a leaderboard</h2>
+        <form class="auth-form" id="join-form">
+          <div class="field">
+            <label for="j-code">Join code</label>
+            <input id="j-code" required placeholder="ABC123" style="text-transform: uppercase;">
+          </div>
+          <p class="form-error" id="join-error"></p>
+          <button class="btn btn-primary" type="submit">Join</button>
+        </form>
+      </div>
+    </div>
+
+    <h2 style="font-family: var(--font-display); font-size: 1.4rem; margin: 0 0 14px;">Yours</h2>
+    <div id="my-leaderboards"></div>
+  </div>
+
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+(function () {
+  Api.get("/api/auth/me").then(function (res) {
+    if (!res.user) {
+      document.getElementById("signed-out-notice").hidden = false;
+      return;
+    }
+    document.getElementById("leaderboards-ui").hidden = false;
+    init();
+  });
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function init() {
+    var createForm = document.getElementById("create-form");
+    var createError = document.getElementById("create-error");
+    var joinForm = document.getElementById("join-form");
+    var joinError = document.getElementById("join-error");
+    var listEl = document.getElementById("my-leaderboards");
+
+    function loadMine() {
+      Api.get("/api/leaderboards/mine").then(function (res) {
+        listEl.innerHTML = "";
+        if (!res.leaderboards.length) {
+          listEl.innerHTML = '<p class="form-note">You\'re not in any leaderboards yet.</p>';
+          return;
+        }
+        res.leaderboards.forEach(function (lb) {
+          var card = document.createElement("a");
+          card.href = "/leaderboard.html?id=" + encodeURIComponent(lb.id);
+          card.className = "day-tile";
+          card.style.display = "block";
+          card.innerHTML =
+            '<div class="title">' + escapeHtml(lb.name) + "</div>" +
+            '<div class="type">' + lb.memberCount + (lb.memberCount === 1 ? " member" : " members") +
+            (lb.isOwner ? " · you own this" : "") + "</div>" +
+            '<div class="stats">Join code: ' + escapeHtml(lb.joinCode) + "</div>";
+          listEl.appendChild(card);
+        });
+      });
+    }
+
+    createForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      createError.textContent = "";
+      Api.post("/api/leaderboards", { name: document.getElementById("c-name").value.trim() })
+        .then(function (res) {
+          createForm.reset();
+          location.href = "/leaderboard.html?id=" + encodeURIComponent(res.leaderboard.id);
+        })
+        .catch(function (err) { createError.textContent = err.message; });
+    });
+
+    joinForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      joinError.textContent = "";
+      Api.post("/api/leaderboards/join", { code: document.getElementById("j-code").value.trim() })
+        .then(function (res) {
+          joinForm.reset();
+          location.href = "/leaderboard.html?id=" + encodeURIComponent(res.leaderboard.id);
+        })
+        .catch(function (err) { joinError.textContent = err.message; });
+    });
+
+    loadMine();
+  }
+})();
+</script>
+</body>
+</html>

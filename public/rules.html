@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rules — Logicdle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <div>
+      <p class="site-title"><a href="/index.html">Logicdle</a></p>
+      <p class="site-tagline">One puzzle a day.</p>
+    </div>
+    <nav class="site-nav" id="user-nav"></nav>
+  </header>
+
+  <div class="pad">
+    <div class="pad-page">
+      <div class="pad-head">
+        <div>
+          <h1 id="puzzle-title">Loading…</h1>
+          <div class="pad-meta">
+            <span id="meta-date">—</span>
+            <span id="meta-type">—</span>
+            <span id="meta-difficulty">—</span>
+            <span id="meta-author">—</span>
+          </div>
+        </div>
+        <div class="stamp" id="day-stamp" hidden>Solved</div>
+      </div>
+
+      <div id="rules-body" class="rules-body">Loading rules…</div>
+      <div id="rules-images" class="rules-images"></div>
+
+      <div class="rules-actions">
+        <button class="btn btn-primary btn-big" id="continue-btn">Continue →</button>
+      </div>
+      <p class="form-error" id="continue-error"></p>
+    </div>
+  </div>
+
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  var puzzleId = params.get("puzzle");
+  var continueBtn = document.getElementById("continue-btn");
+  var errorEl = document.getElementById("continue-error");
+
+  if (!puzzleId) {
+    document.getElementById("puzzle-title").textContent = "No puzzle specified";
+    document.getElementById("rules-body").textContent = "Go back to the archive and pick a puzzle.";
+    continueBtn.hidden = true;
+    return;
+  }
+
+  Api.get("/api/puzzles/" + encodeURIComponent(puzzleId))
+    .then(function (res) {
+      var p = res.puzzle;
+      document.title = p.title + " — Rules";
+      document.getElementById("puzzle-title").textContent = p.title;
+      document.getElementById("meta-date").textContent = p.date;
+      document.getElementById("meta-type").textContent = p.type;
+      document.getElementById("meta-difficulty").textContent = p.difficulty;
+      document.getElementById("meta-author").textContent = "by " + p.author;
+
+      var rulesText = (p.rules && p.rules.text) || "No rules have been written for this puzzle yet — standard rules for the genre apply.";
+      document.getElementById("rules-body").textContent = rulesText;
+
+      var imagesEl = document.getElementById("rules-images");
+      ((p.rules && p.rules.images) || []).forEach(function (src) {
+        var img = document.createElement("img");
+        img.src = src;
+        img.alt = "Rules illustration";
+        imagesEl.appendChild(img);
+      });
+
+      if (p.solved) {
+        var stamp = document.getElementById("day-stamp");
+        stamp.hidden = false;
+        stamp.className = "stamp stamp-solved";
+        continueBtn.textContent = "Play again →";
+      }
+    })
+    .catch(function (err) {
+      document.getElementById("puzzle-title").textContent = "Puzzle not available";
+      document.getElementById("rules-body").textContent = err.message;
+      continueBtn.hidden = true;
+    });
+
+  continueBtn.addEventListener("click", function () {
+    errorEl.textContent = "";
+    continueBtn.disabled = true;
+    continueBtn.textContent = "Loading…";
+
+    Api.post("/api/puzzles/" + encodeURIComponent(puzzleId) + "/play")
+      .then(function (res) {
+        sessionStorage.setItem(
+          "play:" + puzzleId,
+          JSON.stringify({
+            penpaShare: res.penpaShare,
+            successMessage: res.successMessage,
+            startedAt: res.startedAt,
+            alreadySolved: res.alreadySolved,
+            timeMs: res.timeMs,
+          })
+        );
+        location.href = "/solve.html?puzzle=" + encodeURIComponent(puzzleId);
+      })
+      .catch(function (err) {
+        continueBtn.disabled = false;
+        continueBtn.textContent = "Continue →";
+        if (err.status === 401) {
+          location.href = "/login.html?next=" + encodeURIComponent(location.pathname + location.search);
+          return;
+        }
+        errorEl.textContent = err.message;
+      });
+  });
+})();
+</script>
+</body>
+</html>

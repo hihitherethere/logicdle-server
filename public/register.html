@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Register — Logicdle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap narrow">
+  <header class="site-header">
+    <div>
+      <p class="site-title"><a href="/index.html">Logicdle</a></p>
+    </div>
+  </header>
+
+  <div class="pad">
+    <div class="pad-page">
+      <h2>Create an account</h2>
+      <p class="form-note" style="margin-bottom:16px;">Tracks your streak, solve times, and which puzzles you've finished.</p>
+      <form class="auth-form" id="register-form">
+        <div class="field">
+          <label for="username">Username</label>
+          <input id="username" name="username" autocomplete="username" required minlength="3" maxlength="32" pattern="[a-zA-Z0-9_\-.]+">
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="new-password" required minlength="8">
+        </div>
+        <p class="form-error" id="form-error"></p>
+        <button class="btn btn-primary" type="submit">Create account</button>
+      </form>
+      <p class="form-note" style="margin-top:16px;">Already have an account? <a href="/login.html">Sign in</a></p>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  var next = params.get("next") || "/index.html";
+  var form = document.getElementById("register-form");
+  var errorEl = document.getElementById("form-error");
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    errorEl.textContent = "";
+    Api.post("/api/auth/register", {
+      username: document.getElementById("username").value.trim(),
+      password: document.getElementById("password").value,
+    })
+      .then(function () { location.href = next; })
+      .catch(function (err) { errorEl.textContent = err.message; });
+  });
+})();
+</script>
+</body>
+</html>

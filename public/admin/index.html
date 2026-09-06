@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Logicdle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <div>
+      <p class="site-title"><a href="/index.html">Logicdle</a></p>
+      <p class="site-tagline">Admin</p>
+    </div>
+    <nav class="site-nav" id="user-nav"></nav>
+  </header>
+
+  <div id="not-admin" hidden class="notice">
+    You need to <a href="/login.html?next=/admin/index.html">sign in with an admin account</a> to see this page.
+  </div>
+
+  <div id="admin-ui" hidden>
+    <div class="site-nav" style="margin-bottom: 20px;">
+      <a href="/admin/index.html" aria-current="page">Puzzles</a>
+      <a href="/admin/submissions.html">Submissions</a>
+    </div>
+
+    <div class="admin-grid">
+
+      <div class="admin-card">
+        <h2 id="form-title">New puzzle</h2>
+        <form class="auth-form" id="puzzle-form">
+          <p class="form-note" id="editing-id-note" hidden></p>
+
+          <div class="field">
+            <label>Release date</label>
+            <div style="display:flex; gap:16px; font-family: var(--font-body); font-size: 0.9rem; margin-bottom: 4px;">
+              <label style="display:flex; align-items:center; gap:6px; text-transform:none; letter-spacing:normal; font-size:0.9rem;">
+                <input type="radio" name="date-mode" id="date-mode-auto" value="auto" checked>
+                Automatic (after the latest queued puzzle)
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; text-transform:none; letter-spacing:normal; font-size:0.9rem;">
+                <input type="radio" name="date-mode" id="date-mode-manual" value="manual">
+                Manual
+              </label>
+            </div>
+            <input id="f-date" pattern="\d{4}-\d{2}-\d{2}" placeholder="2026-09-01" disabled>
+          </div>
+          <div class="field">
+            <label for="f-title">Title</label>
+            <input id="f-title" required placeholder="Fillomino No. 42">
+          </div>
+          <div class="field">
+            <label for="f-type">Puzzle type</label>
+            <input id="f-type" required placeholder="Fillomino">
+          </div>
+          <div class="field">
+            <label for="f-difficulty">Difficulty</label>
+            <select id="f-difficulty" required>
+              <option value="">Select…</option>
+              <option>Easy</option>
+              <option>Medium</option>
+              <option>Hard</option>
+              <option>Insane</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-author">Author</label>
+            <input id="f-author" required placeholder="Your name">
+          </div>
+          <div class="field">
+            <label for="f-share">Penpa share string (optional if you fill in the text description below instead)</label>
+            <textarea id="f-share" rows="3" placeholder="Everything after the &quot;#&quot; in penpa's &quot;URL with answer check&quot; link"></textarea>
+          </div>
+          <div class="field">
+            <label for="f-text-puzzle">Text puzzle description (optional if you provide a Penpa share string above)</label>
+            <textarea id="f-text-puzzle" rows="4" placeholder="Describe the puzzle in words if there's no penpa link — shown on the solve page instead of an interactive grid, with a manual &quot;mark as solved&quot; button since there's no way to auto-check it."></textarea>
+          </div>
+          <div class="field">
+            <label for="f-success">Success message (only used if you provided a Penpa link)</label>
+            <input id="f-success" value="Congratulations">
+          </div>
+          <div class="field">
+            <label for="f-extras">Extra content (shown ABOVE the puzzle on the solve page)</label>
+            <textarea id="f-extras" rows="3" placeholder="Optional note, hint, or context for this puzzle…"></textarea>
+          </div>
+          <div class="field">
+            <label for="f-extras-image">Extra content images</label>
+            <input id="f-extras-image" type="file" accept="image/*">
+            <div class="thumb-row" id="extras-thumb-row"></div>
+          </div>
+          <div class="field">
+            <label for="f-rules">Rules text (shown BELOW the puzzle on the solve page)</label>
+            <textarea id="f-rules" rows="6" placeholder="Shade some cells so that..."></textarea>
+          </div>
+          <div class="field">
+            <label for="f-image">Rule images</label>
+            <input id="f-image" type="file" accept="image/*">
+            <div class="thumb-row" id="thumb-row"></div>
+          </div>
+          <p class="form-error" id="form-error"></p>
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-primary" type="submit" id="save-btn">Save puzzle</button>
+            <button class="btn" type="button" id="clear-form-btn">New / clear form</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="admin-card">
+        <h2>Puzzles</h2>
+        <div class="puzzle-list" id="puzzle-list"></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/admin/js/admin.js"></script>
+</body>
+</html>

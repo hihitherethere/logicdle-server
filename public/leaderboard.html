@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leaderboard — Logicdle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <div>
+      <p class="site-title"><a href="/index.html">Logicdle</a></p>
+      <p class="site-tagline"><a href="/leaderboards.html">← All leaderboards</a></p>
+    </div>
+    <nav class="site-nav" id="user-nav"></nav>
+  </header>
+
+  <div id="notice" hidden class="notice"></div>
+
+  <div id="lb-ui" hidden>
+    <div class="pad-head">
+      <div>
+        <h1 id="lb-name" style="font-family: var(--font-display); font-size: clamp(1.5rem, 3.4vw, 2.1rem); margin: 0 0 6px;"></h1>
+        <div class="pad-meta">
+          <span id="lb-members">—</span>
+          <span id="lb-code">—</span>
+        </div>
+      </div>
+      <button class="btn" id="leave-btn">Leave</button>
+    </div>
+
+    <table class="completions-table" style="margin-top: 20px;">
+      <thead>
+        <tr><th>Rank</th><th>Player</th><th>Score</th><th>Solved</th></tr>
+      </thead>
+      <tbody id="standings-body"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+(function () {
+  var id = new URLSearchParams(location.search).get("id");
+  var noticeEl = document.getElementById("notice");
+  var uiEl = document.getElementById("lb-ui");
+
+  if (!id) {
+    noticeEl.hidden = false;
+    noticeEl.innerHTML = 'No leaderboard specified. Go back to <a href="/leaderboards.html">all leaderboards</a>.';
+  } else {
+    Api.get("/api/auth/me").then(function (res) {
+      if (!res.user) {
+        location.href = "/login.html?next=" + encodeURIComponent(location.pathname + location.search);
+        return;
+      }
+      load();
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function load() {
+    Api.get("/api/leaderboards/" + encodeURIComponent(id))
+      .then(function (res) {
+        uiEl.hidden = false;
+        document.title = res.leaderboard.name + " — Logicdle";
+        document.getElementById("lb-name").textContent = res.leaderboard.name;
+        document.getElementById("lb-members").textContent =
+          res.leaderboard.memberCount + (res.leaderboard.memberCount === 1 ? " member" : " members");
+        document.getElementById("lb-code").textContent = "Join code: " + res.leaderboard.joinCode;
+
+        var tbody = document.getElementById("standings-body");
+        tbody.innerHTML = "";
+        res.standings.forEach(function (s, idx) {
+          var tr = document.createElement("tr");
+          tr.innerHTML =
+            "<td>" + (idx + 1) + "</td>" +
+            "<td>" + escapeHtml(s.username) + "</td>" +
+            "<td>" + s.score + "</td>" +
+            "<td>" + s.solved + "</td>";
+          tbody.appendChild(tr);
+        });
+
+        document.getElementById("leave-btn").addEventListener("click", function () {
+          if (!confirm('Leave "' + res.leaderboard.name + '"?')) return;
+          Api.post("/api/leaderboards/" + encodeURIComponent(id) + "/leave").then(function () {
+            location.href = "/leaderboards.html";
+          });
+        });
+      })
+      .catch(function (err) {
+        noticeEl.hidden = false;
+        noticeEl.textContent = err.message;
+      });
+  }
+})();
+</script>
+</body>
+</html>

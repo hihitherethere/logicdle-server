@@ -1,0 +1,358 @@
+/* ---------------------------------------------------------------------
+   TOKENS
+   ------------------------------------------------------------------- */
+:root {
+  --paper: #f6f4ee;
+  --ink: #232a2e;
+  --ink-soft: #5b6670;
+  --pencil: #2f4ea3;
+  --pencil-dark: #1f3676;
+  --correct: #2e7d46;
+  --correct-bg: #e3f3e6;
+  --locked: #98a2a8;
+  --danger: #b3432b;
+  --card-bg: #fffefb;
+  --shadow: rgba(35, 42, 46, 0.18);
+
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-body);
+  background: var(--paper);
+  min-height: 100vh;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+a { color: var(--pencil-dark); }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 3px solid var(--pencil);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------
+   SHELL / HEADER
+   ------------------------------------------------------------------- */
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 24px 80px; }
+.wrap.narrow { max-width: 560px; }
+
+.site-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  padding: 40px 0 28px;
+}
+
+.site-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-style: italic;
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.site-title a { color: var(--ink); text-decoration: none; }
+
+.site-tagline {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex-wrap: wrap;
+}
+.site-nav a { text-decoration: none; border-bottom: 2px solid transparent; padding-bottom: 2px; }
+.site-nav a:hover, .site-nav a[aria-current="page"] { border-bottom-color: var(--pencil); }
+.nav-user { color: var(--ink-soft); }
+
+/* ---------------------------------------------------------------------
+   BUTTONS
+   ------------------------------------------------------------------- */
+.btn {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1.5px solid #d6cfbc;
+  background: var(--card-bg);
+  color: var(--ink);
+  padding: 10px 18px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.1s ease, border-color 0.1s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn:hover { background: #f1efe6; border-color: #c9c0a6; }
+.btn:active { background: #ebe7da; }
+
+.btn-primary { background: var(--pencil); border-color: var(--pencil-dark); color: #fff; }
+.btn-primary:hover { background: var(--pencil-dark); border-color: var(--pencil-dark); }
+.btn-big { font-size: 1rem; padding: 16px 28px; }
+.btn-danger { border-color: var(--danger); color: var(--danger); }
+.btn[disabled] { opacity: 0.5; cursor: default; }
+
+/* ---------------------------------------------------------------------
+   HOME HERO
+   ------------------------------------------------------------------- */
+.home-hero { text-align: center; padding: 40px 0 20px; }
+.home-hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3rem);
+  margin: 0 0 10px;
+}
+.home-hero p { color: var(--ink-soft); max-width: 46ch; margin: 0 auto 32px; }
+.home-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px; }
+.today-preview {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  margin-top: 18px;
+}
+
+/* ---------------------------------------------------------------------
+   CARD (shared container for the puzzle header/body)
+   ------------------------------------------------------------------- */
+.pad { margin: 12px 0 48px; }
+
+.pad-page {
+  background: var(--card-bg);
+  border: 1px solid #e3ded1;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(35, 42, 46, 0.06);
+  padding: 30px clamp(18px, 4vw, 40px) 36px;
+}
+
+.pad-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.pad-head h1, .pad-head h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3.4vw, 2.1rem); margin: 0 0 6px; }
+.pad-meta { font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink-soft); display: flex; gap: 14px; flex-wrap: wrap; }
+.pad-meta span { white-space: nowrap; }
+
+.stamp {
+  font-family: var(--font-mono); font-weight: 600; font-size: 0.7rem;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--pencil-dark);
+  background: #eef1fa; border-radius: 4px;
+  padding: 5px 10px; white-space: nowrap; flex-shrink: 0;
+}
+.stamp.stamp-solved { color: var(--correct); background: var(--correct-bg); }
+.stamp.stamp-locked { color: var(--locked); background: #eef0f1; }
+
+/* ---------------------------------------------------------------------
+   RULES PAGE
+   ------------------------------------------------------------------- */
+.rules-body { font-size: 1rem; line-height: 1.65; white-space: pre-wrap; margin-bottom: 22px; }
+.rules-images {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px; margin-bottom: 26px;
+}
+.rules-images img {
+  width: 100%; max-height: 260px; display: block; object-fit: contain;
+  border: 1px solid #e3ded1; border-radius: 4px; background: var(--paper);
+}
+.rules-actions { display: flex; justify-content: flex-end; }
+
+/* ---------------------------------------------------------------------
+   SOLVE PAGE
+   ------------------------------------------------------------------- */
+.solve-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.timer {
+  font-family: var(--font-mono); font-size: 1.4rem; font-weight: 600;
+  color: var(--pencil-dark); letter-spacing: 0.03em; font-variant-numeric: tabular-nums;
+}
+.timer.is-stopped { color: var(--correct); }
+
+.penpa-frame-shell { position: relative; border: 1px solid #dcd5c4; background: #fff; border-radius: 2px; overflow: hidden; }
+/* Height is set inline by solve.html once the same-origin puzzle content
+   reports its own scrollHeight, so the iframe never needs its own
+   scrollbar — this is just a sane default while that measurement runs. */
+.penpa-frame-shell iframe { display: block; width: 100%; height: 620px; min-height: 460px; border: 0; overflow: hidden; }
+.penpa-loading {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 0.85rem; color: var(--ink-soft); background: var(--card-bg);
+}
+
+.solve-strip { margin-top: 18px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: space-between; }
+.solve-status { font-family: var(--font-mono); font-size: 0.85rem; display: flex; align-items: center; gap: 8px; }
+.solve-status .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--locked); flex-shrink: 0; }
+.solve-status.is-solved .dot { background: var(--correct); }
+.solve-status.is-watching .dot { background: var(--pencil); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+.solved-banner {
+  margin-top: 18px; padding: 16px 20px; background: var(--correct-bg); color: var(--correct);
+  border: 1px solid var(--correct); border-radius: 3px; font-family: var(--font-mono); font-size: 0.9rem;
+}
+
+.unconfigured, .notice {
+  padding: 40px 20px; text-align: center; font-family: var(--font-mono); color: var(--ink-soft);
+}
+.unconfigured {
+  background: repeating-linear-gradient(135deg, #f1efe6, #f1efe6 10px, #e9e4d4 10px, #e9e4d4 20px);
+}
+.unconfigured code, .notice code { display: inline-block; margin-top: 8px; background: #fff; padding: 2px 8px; border: 1px solid #ddd6c2; font-size: 0.78rem; }
+
+/* ---------------------------------------------------------------------
+   ARCHIVE
+   ------------------------------------------------------------------- */
+.archive-intro { color: var(--ink-soft); max-width: 60ch; margin-bottom: 20px; }
+
+.archive-controls {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  margin-bottom: 22px;
+}
+.archive-controls input[type="search"],
+.archive-controls select {
+  font-family: var(--font-body); font-size: 0.9rem; padding: 9px 12px;
+  border: 1.5px solid #d6cfbc; border-radius: 5px; background: #fff; color: var(--ink);
+}
+.archive-controls input[type="search"] { flex: 1 1 220px; min-width: 160px; }
+.archive-controls select { flex: 0 0 auto; }
+.archive-count { font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-soft); margin-bottom: 14px; }
+
+.archive-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+.day-tile {
+  position: relative; display: block; text-decoration: none; color: inherit;
+  background: var(--card-bg); border: 1px solid #e3ded1; border-radius: 6px;
+  padding: 16px 16px 18px; box-shadow: 0 1px 3px rgba(35,42,46,0.05);
+  transition: border-color 0.1s ease, box-shadow 0.1s ease;
+}
+.day-tile:hover { border-color: #c9c0a6; box-shadow: 0 2px 8px rgba(35,42,46,0.08); }
+.day-tile .date { font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-soft); letter-spacing: 0.04em; }
+.day-tile .title { font-family: var(--font-display); font-size: 1.15rem; margin: 4px 0 8px; }
+.day-tile .type { font-size: 0.82rem; color: var(--ink-soft); }
+.day-tile .stats { font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-soft); margin-top: 8px; }
+.day-tile .badge { position: absolute; top: 12px; right: 12px; font-family: var(--font-mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 7px; border-radius: 4px; }
+.badge-solved { background: var(--correct-bg); color: var(--correct); }
+.badge-today { background: #e8edfb; color: var(--pencil-dark); }
+
+.archive-pagination {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  margin-top: 28px; font-family: var(--font-mono); font-size: 0.82rem;
+}
+.archive-pagination .page-info { color: var(--ink-soft); }
+
+/* ---------------------------------------------------------------------
+   AUTH FORMS
+   ------------------------------------------------------------------- */
+.auth-form { display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); }
+.field input, .field textarea, .field select {
+  font-family: var(--font-body); font-size: 0.95rem; padding: 10px 12px;
+  border: 1.5px solid #d6cfbc; border-radius: 3px; background: #fff; color: var(--ink);
+}
+.field textarea { font-family: var(--font-mono); font-size: 0.85rem; resize: vertical; }
+.form-error { font-family: var(--font-mono); font-size: 0.82rem; color: var(--danger); min-height: 1em; }
+.form-note { font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-soft); }
+
+/* ---------------------------------------------------------------------
+   ADMIN
+   ------------------------------------------------------------------- */
+.admin-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 28px; align-items: start; }
+@media (max-width: 860px) { .admin-grid { grid-template-columns: 1fr; } }
+
+.admin-card { background: var(--card-bg); border: 1px solid #e3ded1; border-radius: 2px; padding: 22px clamp(16px, 3vw, 28px); }
+.admin-card h2 { font-family: var(--font-display); font-size: 1.3rem; margin: 0 0 16px; }
+
+.thumb-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.thumb { position: relative; width: 84px; height: 84px; border: 1px solid #ddd6c2; border-radius: 3px; overflow: hidden; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb button {
+  position: absolute; top: 2px; right: 2px; background: rgba(35,42,46,0.75); color: #fff;
+  border: 0; width: 18px; height: 18px; border-radius: 50%; font-size: 0.7rem; line-height: 1; cursor: pointer;
+}
+
+.puzzle-list { display: flex; flex-direction: column; gap: 10px; max-height: 70vh; overflow-y: auto; }
+.puzzle-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 10px 12px; border: 1px solid #e3ded1; border-radius: 3px; background: #fff;
+}
+.puzzle-row .meta { font-size: 0.85rem; }
+.puzzle-row .meta .t { font-weight: 600; }
+.puzzle-row .meta .d { font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-soft); }
+.puzzle-row .actions { display: flex; gap: 8px; }
+.puzzle-row .actions button {
+  font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase;
+  border: 1.5px solid var(--ink); background: transparent; padding: 5px 9px; border-radius: 3px; cursor: pointer;
+}
+.puzzle-row .actions button.danger { border-color: var(--danger); color: var(--danger); }
+
+.completions-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 10px; }
+.completions-table th, .completions-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee6d5; }
+.completions-table th { font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase; color: var(--ink-soft); }
+
+/* ---------------------------------------------------------------------
+   SUBMISSIONS (user-facing submit page + admin review page)
+   ------------------------------------------------------------------- */
+.submission-card {
+  background: var(--card-bg); border: 1px solid #e3ded1; border-radius: 6px;
+  padding: 18px 20px; margin-bottom: 16px;
+}
+.submission-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.submission-head .t { font-family: var(--font-display); font-size: 1.15rem; }
+.submission-meta { font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-soft); margin-top: 4px; }
+
+.status-badge {
+  font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase;
+  letter-spacing: 0.05em; padding: 4px 9px; border-radius: 4px; white-space: nowrap;
+}
+.status-pending { background: #fdf3df; color: #8a6a1a; }
+.status-accepted { background: var(--correct-bg); color: var(--correct); }
+.status-rejected { background: #fbe6e2; color: var(--danger); }
+
+.comment-thread { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.comment {
+  background: var(--paper); border: 1px solid #ece7d8; border-radius: 5px;
+  padding: 8px 12px; font-size: 0.85rem;
+}
+.comment .who { font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-soft); margin-bottom: 3px; }
+.comment.is-admin { border-left: 3px solid var(--pencil); }
+.comment-form { display: flex; gap: 8px; margin-top: 10px; }
+.comment-form input { flex: 1; font-family: var(--font-body); font-size: 0.85rem; padding: 8px 10px; border: 1.5px solid #d6cfbc; border-radius: 5px; }
+
+.submission-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+/* ---------------------------------------------------------------------
+   TEXT PUZZLE (used on the solve page instead of the penpa iframe when
+   a puzzle has text content but no penpa share link)
+   ------------------------------------------------------------------- */
+.text-puzzle-block {
+  background: var(--card-bg); border: 1px solid #e3ded1; border-radius: 6px;
+  padding: 24px clamp(16px, 3vw, 30px); font-size: 1rem; line-height: 1.7; white-space: pre-wrap;
+}
+
+/* ---------------------------------------------------------------------
+   FOOTER
+   ------------------------------------------------------------------- */
+.site-footer {
+  margin-top: 60px; padding-top: 22px; border-top: 1px dashed #cfc7b2;
+  font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-soft);
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+}
+.site-footer a { color: var(--ink-soft); }

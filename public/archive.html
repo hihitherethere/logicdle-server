@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Archive — Logicdle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <div>
+      <p class="site-title"><a href="/index.html">Logicdle</a></p>
+      <p class="site-tagline">One puzzle a day.</p>
+    </div>
+    <nav class="site-nav" id="user-nav"></nav>
+  </header>
+
+  <h1 style="font-family: var(--font-display); font-size: clamp(1.6rem, 3.6vw, 2.2rem); margin: 8px 0 6px;">
+    Every puzzle so far
+  </h1>
+  <p class="archive-intro" id="archive-intro">Loading…</p>
+
+  <div class="archive-controls" id="archive-controls" hidden>
+    <input type="search" id="search-input" placeholder="Search title, type, or author…">
+    <select id="difficulty-filter">
+      <option value="">All difficulties</option>
+      <option>Easy</option>
+      <option>Medium</option>
+      <option>Hard</option>
+      <option>Insane</option>
+    </select>
+    <select id="sort-select">
+      <option value="newest">Newest first</option>
+      <option value="oldest">Oldest first</option>
+      <option value="most-solved">Most solved</option>
+      <option value="least-solved">Least solved</option>
+      <option value="fastest">Fastest avg. time</option>
+      <option value="slowest">Slowest avg. time</option>
+    </select>
+  </div>
+
+  <p class="archive-count" id="archive-count"></p>
+  <div class="archive-grid" id="archive-grid"></div>
+
+  <div class="archive-pagination" id="pagination" hidden>
+    <button class="btn" id="prev-btn">← Prev</button>
+    <span class="page-info" id="page-info"></span>
+    <button class="btn" id="next-btn">Next →</button>
+  </div>
+
+  <footer class="site-footer">
+    <span>Built with <a href="https://github.com/swaroopg92/penpa-edit" target="_blank" rel="noopener">penpa-edit</a> by Swaroop Guggilam &amp; contributors.</span>
+    <span><a href="/index.html">← Back to today</a></span>
+  </footer>
+
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script>
+(function () {
+  var grid = document.getElementById("archive-grid");
+  var intro = document.getElementById("archive-intro");
+  var controls = document.getElementById("archive-controls");
+  var countEl = document.getElementById("archive-count");
+  var searchInput = document.getElementById("search-input");
+  var difficultyFilter = document.getElementById("difficulty-filter");
+  var sortSelect = document.getElementById("sort-select");
+  var pagination = document.getElementById("pagination");
+  var prevBtn = document.getElementById("prev-btn");
+  var nextBtn = document.getElementById("next-btn");
+  var pageInfo = document.getElementById("page-info");
+
+  var PAGE_SIZE = 12;
+  var page = 1;
+  var allPuzzles = [];
+  var today = null;
+
+  Api.get("/api/puzzles").then(function (res) {
+    allPuzzles = res.puzzles;
+    today = res.today;
+    if (!allPuzzles.length) {
+      intro.textContent = "No puzzles have been released yet — check back soon.";
+      return;
+    }
+    intro.textContent = "Solved puzzles are stamped and show your time. Tap any puzzle to open its rules.";
+    controls.hidden = false;
+    render();
+  }).catch(function (err) {
+    intro.textContent = "Couldn't load the archive: " + err.message;
+  });
+
+  function matches(p, query) {
+    if (!query) return true;
+    var haystack = (p.title + " " + p.type + " " + p.author).toLowerCase();
+    return haystack.indexOf(query) !== -1;
+  }
+
+  function sortPuzzles(list, mode) {
+    var sorted = list.slice();
+    switch (mode) {
+      case "oldest":
+        sorted.sort(function (a, b) { return a.date.localeCompare(b.date); });
+        break;
+      case "most-solved":
+        sorted.sort(function (a, b) { return b.solveCount - a.solveCount; });
+        break;
+      case "least-solved":
+        sorted.sort(function (a, b) { return a.solveCount - b.solveCount; });
+        break;
+      case "fastest":
+        sorted.sort(function (a, b) {
+          if (a.avgTimeMs == null) return 1;
+          if (b.avgTimeMs == null) return -1;
+          return a.avgTimeMs - b.avgTimeMs;
+        });
+        break;
+      case "slowest":
+        sorted.sort(function (a, b) {
+          if (a.avgTimeMs == null) return 1;
+          if (b.avgTimeMs == null) return -1;
+          return b.avgTimeMs - a.avgTimeMs;
+        });
+        break;
+      default: // newest
+        sorted.sort(function (a, b) { return b.date.localeCompare(a.date); });
+    }
+    return sorted;
+  }
+
+  function render() {
+    var query = searchInput.value.trim().toLowerCase();
+    var difficulty = difficultyFilter.value;
+
+    var filtered = allPuzzles.filter(function (p) {
+      return matches(p, query) && (!difficulty || p.difficulty === difficulty);
+    });
+    filtered = sortPuzzles(filtered, sortSelect.value);
+
+    var totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    if (page > totalPages) page = totalPages;
+    if (page < 1) page = 1;
+
+    var pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+    countEl.textContent = filtered.length + (filtered.length === 1 ? " puzzle" : " puzzles") +
+      (query || difficulty ? " matching your filters" : "");
+
+    grid.innerHTML = "";
+    if (!pageItems.length) {
+      grid.innerHTML = '<p class="form-note">No puzzles match your filters.</p>';
+    }
+    pageItems.forEach(function (p) {
+      var el = document.createElement("a");
+      el.href = "/rules.html?puzzle=" + encodeURIComponent(p.id);
+      el.className = "day-tile";
+
+      var badge = "";
+      if (p.date === today) badge = '<span class="badge badge-today">Today</span>';
+      else if (p.solved) badge = '<span class="badge badge-solved">Solved</span>';
+
+      var statsLine = p.solveCount
+        ? p.solveCount + (p.solveCount === 1 ? " solve" : " solves") +
+          (p.avgTimeMs ? " · avg " + formatMs(p.avgTimeMs) : "")
+        : "No solves yet";
+
+      el.innerHTML =
+        badge +
+        '<div class="date">' + p.date + "</div>" +
+        '<div class="title">' + escapeHtml(p.title) + "</div>" +
+        '<div class="type">' + escapeHtml(p.type) + " · " + escapeHtml(p.difficulty) + "</div>" +
+        '<div class="stats">' + statsLine + "</div>" +
+        (p.solved && p.timeMs ? '<div class="stats">Your time: ' + formatMs(p.timeMs) + "</div>" : "");
+
+      grid.appendChild(el);
+    });
+
+    if (totalPages > 1) {
+      pagination.hidden = false;
+      pageInfo.textContent = "Page " + page + " of " + totalPages;
+      prevBtn.disabled = page <= 1;
+      nextBtn.disabled = page >= totalPages;
+    } else {
+      pagination.hidden = true;
+    }
+  }
+
+  searchInput.addEventListener("input", function () { page = 1; render(); });
+  difficultyFilter.addEventListener("change", function () { page = 1; render(); });
+  sortSelect.addEventListener("change", function () { page = 1; render(); });
+  prevBtn.addEventListener("click", function () { page--; render(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+  nextBtn.addEventListener("click", function () { page++; render(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+
+  function formatMs(ms) {
+    var totalSec = Math.round(ms / 1000);
+    var m = Math.floor(totalSec / 60);
+    var s = totalSec % 60;
+    return m + ":" + String(s).padStart(2, "0");
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+})();
+</script>
+</body>
+</html>

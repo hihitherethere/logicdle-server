@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review submissions — Logicdle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <div>
+      <p class="site-title"><a href="/index.html">Logicdle</a></p>
+      <p class="site-tagline">Review submissions</p>
+    </div>
+    <nav class="site-nav" id="user-nav"></nav>
+  </header>
+
+  <div id="not-admin" hidden class="notice">
+    You need to <a href="/login.html?next=/admin/submissions.html">sign in with an admin account</a> to see this page.
+  </div>
+
+  <div id="admin-ui" hidden>
+    <div class="site-nav" style="margin-bottom: 20px;">
+      <a href="/admin/index.html">Puzzles</a>
+      <a href="/admin/submissions.html" aria-current="page">Submissions</a>
+    </div>
+
+    <div class="archive-controls" style="margin-bottom: 24px;">
+      <select id="status-filter">
+        <option value="pending">Pending</option>
+        <option value="accepted">Accepted</option>
+        <option value="rejected">Rejected</option>
+        <option value="">All</option>
+      </select>
+    </div>
+
+    <div id="submissions-list"></div>
+  </div>
+
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/admin/js/submissions.js"></script>
+</body>
+</html>
