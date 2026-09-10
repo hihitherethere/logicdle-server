@@ -34,12 +34,14 @@
       <button class="btn" id="leave-btn">Leave</button>
     </div>
 
-    <table class="completions-table" style="margin-top: 20px;">
-      <thead>
-        <tr><th>Rank</th><th>Player</th><th>Score</th><th>Solved</th></tr>
-      </thead>
-      <tbody id="standings-body"></tbody>
-    </table>
+    <p class="archive-intro" style="margin-top: 16px;">
+      Each day's results appear here once that day has passed — while a puzzle is
+      still "today's," nobody's standing is shown, so solving it isn't a race.
+      Nothing is scored cumulatively; every day's ranking is just that day's solve
+      times, freshly computed.
+    </p>
+
+    <div id="days-list"></div>
   </div>
 
 </div>
@@ -71,6 +73,11 @@
     });
   }
 
+  function formatMs(ms) {
+    var totalSec = Math.round(ms / 1000);
+    return Math.floor(totalSec / 60) + ":" + String(totalSec % 60).padStart(2, "0");
+  }
+
   function load() {
     Api.get("/api/leaderboards/" + encodeURIComponent(id))
       .then(function (res) {
@@ -81,16 +88,23 @@
           res.leaderboard.memberCount + (res.leaderboard.memberCount === 1 ? " member" : " members");
         document.getElementById("lb-code").textContent = "Join code: " + res.leaderboard.joinCode;
 
-        var tbody = document.getElementById("standings-body");
-        tbody.innerHTML = "";
-        res.standings.forEach(function (s, idx) {
-          var tr = document.createElement("tr");
-          tr.innerHTML =
-            "<td>" + (idx + 1) + "</td>" +
-            "<td>" + escapeHtml(s.username) + "</td>" +
-            "<td>" + s.score + "</td>" +
-            "<td>" + s.solved + "</td>";
-          tbody.appendChild(tr);
+        var listEl = document.getElementById("days-list");
+        listEl.innerHTML = "";
+        if (!res.days.length) {
+          listEl.innerHTML = '<p class="form-note">No completed days yet — results for a puzzle show up here the day after it releases, once at least one member has solved it.</p>';
+        }
+        res.days.forEach(function (day) {
+          var card = document.createElement("div");
+          card.className = "submission-card";
+          var rows = day.results.map(function (r) {
+            return "<tr><td>" + r.rank + "</td><td>" + escapeHtml(r.username) + "</td><td>" + formatMs(r.timeMs) + "</td></tr>";
+          }).join("");
+          card.innerHTML =
+            '<div class="submission-head"><div class="t">' + escapeHtml(day.title) + '</div>' +
+            '<div class="submission-meta">' + day.date + "</div></div>" +
+            '<table class="completions-table" style="margin-top:10px;"><thead><tr><th>Rank</th><th>Player</th><th>Time</th></tr></thead><tbody>' +
+            rows + "</tbody></table>";
+          listEl.appendChild(card);
         });
 
         document.getElementById("leave-btn").addEventListener("click", function () {

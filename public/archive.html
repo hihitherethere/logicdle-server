@@ -29,10 +29,11 @@
     <input type="search" id="search-input" placeholder="Search title, type, or author…">
     <select id="difficulty-filter">
       <option value="">All difficulties</option>
-      <option>Easy</option>
-      <option>Medium</option>
-      <option>Hard</option>
-      <option>Insane</option>
+      <option value="1">★☆☆☆☆</option>
+      <option value="2">★★☆☆☆</option>
+      <option value="3">★★★☆☆</option>
+      <option value="4">★★★★☆</option>
+      <option value="5">★★★★★</option>
     </select>
     <select id="sort-select">
       <option value="newest">Newest first</option>
@@ -62,6 +63,7 @@
 
 <script src="/js/api.js"></script>
 <script src="/js/nav.js"></script>
+<script src="/js/star-picker.js"></script>
 <script>
 (function () {
   var grid = document.getElementById("archive-grid");
@@ -135,10 +137,10 @@
 
   function render() {
     var query = searchInput.value.trim().toLowerCase();
-    var difficulty = difficultyFilter.value;
+    var difficulty = difficultyFilter.value; // "" | "1".."5"
 
     var filtered = allPuzzles.filter(function (p) {
-      return matches(p, query) && (!difficulty || p.difficulty === difficulty);
+      return matches(p, query) && (!difficulty || String(p.difficulty) === difficulty);
     });
     filtered = sortPuzzles(filtered, sortSelect.value);
 
@@ -173,7 +175,7 @@
         badge +
         '<div class="date">' + p.date + "</div>" +
         '<div class="title">' + escapeHtml(p.title) + "</div>" +
-        '<div class="type">' + escapeHtml(p.type) + " · " + escapeHtml(p.difficulty) + "</div>" +
+        '<div class="type">' + escapeHtml(p.type) + " · " + StarPicker.render(p.difficulty) + "</div>" +
         '<div class="stats">' + statsLine + "</div>" +
         (p.solved && p.timeMs ? '<div class="stats">Your time: ' + formatMs(p.timeMs) + "</div>" : "");
 

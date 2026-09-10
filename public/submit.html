@@ -45,26 +45,27 @@
           <input id="f-type" required placeholder="Fillomino">
         </div>
         <div class="field">
-          <label for="f-difficulty">Difficulty</label>
-          <select id="f-difficulty" required>
-            <option value="">Select…</option>
-            <option>Easy</option>
-            <option>Medium</option>
-            <option>Hard</option>
-            <option>Insane</option>
-          </select>
+          <label>Difficulty</label>
+          <div class="star-picker" data-star-picker>
+            <button type="button" class="star" data-star="1">★</button>
+            <button type="button" class="star" data-star="2">★</button>
+            <button type="button" class="star" data-star="3">★</button>
+            <button type="button" class="star" data-star="4">★</button>
+            <button type="button" class="star" data-star="5">★</button>
+          </div>
+          <input type="hidden" id="f-difficulty" required>
         </div>
         <div class="field">
           <label for="f-author">Author (credited on the puzzle)</label>
           <input id="f-author" required>
         </div>
         <div class="field">
-          <label for="f-share">Penpa share string (optional if you fill in the text description below instead)</label>
+          <label for="f-share">Penpa share string (optional if you provide an answer below instead)</label>
           <textarea id="f-share" rows="3" placeholder="Everything after the &quot;#&quot; in penpa's URL with answer check"></textarea>
         </div>
         <div class="field">
-          <label for="f-text-puzzle">Text puzzle description (optional if you provide a Penpa share string above)</label>
-          <textarea id="f-text-puzzle" rows="4" placeholder="Describe the puzzle in words if you don't have a penpa link — e.g. for puzzle types penpa doesn't support well yet."></textarea>
+          <label for="f-answer">Correct answer (optional if you provide a Penpa link above) — for word/competition-style puzzles checked by typed answer instead of a grid</label>
+          <input id="f-answer" placeholder="e.g. RIVERBANK">
         </div>
         <div class="field">
           <label for="f-success">Success message (only used if you provided a Penpa link)</label>
@@ -105,6 +106,7 @@
 
 <script src="/js/api.js"></script>
 <script src="/js/nav.js"></script>
+<script src="/js/star-picker.js"></script>
 <script>
 (function () {
   Api.get("/api/auth/me").then(function (res) {
@@ -124,6 +126,12 @@
     var extrasThumbRow = document.getElementById("extras-thumb-row");
     var rulesImages = [];
     var extrasImages = [];
+
+    var difficultyPicker = StarPicker.init(
+      document.querySelector("[data-star-picker]"),
+      document.getElementById("f-difficulty"),
+      3
+    );
 
     function makeThumbRenderer(container, list) {
       function draw() {
@@ -175,7 +183,7 @@
         difficulty: document.getElementById("f-difficulty").value,
         author: document.getElementById("f-author").value.trim(),
         penpaShare: document.getElementById("f-share").value.trim(),
-        textPuzzle: document.getElementById("f-text-puzzle").value.trim(),
+        textAnswer: document.getElementById("f-answer").value.trim(),
         successMessage: document.getElementById("f-success").value.trim() || "Congratulations",
         rulesText: document.getElementById("f-rules").value,
         rulesImages: rulesImages,
@@ -187,6 +195,7 @@
         .then(function () {
           form.reset();
           document.getElementById("f-author").value = document.getElementById("f-author").defaultValue;
+          difficultyPicker.setValue(3);
           rulesImages.length = 0; extrasImages.length = 0;
           drawRulesThumbs(); drawExtrasThumbs();
           loadMine();
@@ -225,7 +234,7 @@
           card.innerHTML =
             '<div class="submission-head">' +
               '<div><div class="t">' + escapeHtml(sub.title) + "</div>" +
-              '<div class="submission-meta">' + escapeHtml(sub.type) + " · " + escapeHtml(sub.difficulty) + "</div></div>" +
+              '<div class="submission-meta">' + escapeHtml(sub.type) + " · " + StarPicker.render(sub.difficulty) + "</div></div>" +
               statusBadge(sub.status) +
             "</div>" +
             (sub.status !== "pending"

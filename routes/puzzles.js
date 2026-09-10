@@ -14,11 +14,12 @@ const asyncHandler = require("../lib/asyncHandler");
  * post-login. Everything else here is safe to list in an archive.
  */
 function publicPuzzle(p) {
-  // textPuzzle is excluded here for the same reason penpaShare is: it's
-  // an alternative way of presenting the actual puzzle content (used
-  // when there's no penpa link), so it's held back until /play rather
-  // than sent to anyone browsing the archive or reading the rules page.
-  const { penpaShare, successMessage, textPuzzle, ...rest } = p;
+  // textPuzzle/textAnswer are excluded here for the same reason
+  // penpaShare is: they're alternative ways of presenting/verifying the
+  // actual puzzle (used when there's no penpa link), so they're held
+  // back until /play (and, for textAnswer, verified only via /answer —
+  // its actual value is never sent to the client at all).
+  const { penpaShare, successMessage, textPuzzle, textAnswer, ...rest } = p;
   // Defensive defaults for puzzles saved before `extras` existed.
   rest.rules = rest.rules || { text: "", images: [] };
   rest.extras = rest.extras || { text: "", images: [] };
@@ -59,6 +60,34 @@ function computeUserStats(db, userId) {
 
   const totalSolved = db.completions.filter((c) => c.userId === userId).length;
   return { streak, totalSolved };
+}
+
+// Records a completion the first time it's called for a given
+// user+puzzle; subsequent calls just return the original, unchanged —
+// this is what makes replays/reset-and-resolve never alter a recorded
+// time, whether triggered by /complete or /answer below.
+function recordCompletionIfNeeded(db, userId, puzzle, auto) {
+  const existing = db.completions.find((c) => c.userId === userId && c.puzzleId === puzzle.id);
+  if (existing) return { completion: existing, alreadyRecorded: true };
+
+  const start = db.starts.find((s) => s.userId === userId && s.puzzleId === puzzle.id);
+  const startedAt = start ? new Date(start.startedAt) : null;
+  const solvedAt = new Date();
+  const completion = {
+    userId,
+    puzzleId: puzzle.id,
+    solvedAt: solvedAt.toISOString(),
+    timeMs: startedAt ? solvedAt.getTime() - startedAt.getTime() : null,
+    auto,
+  };
+  db.completions.push(completion);
+  return { completion, alreadyRecorded: false };
+}
+
+// Case/whitespace-insensitive comparison for text-answer puzzles — exact
+// formatting shouldn't matter for a typed word/phrase answer.
+function normalizeAnswer(s) {
+  return String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 // GET /api/puzzles/today — today's puzzle (or most recent released one)
@@ -146,6 +175,10 @@ router.post("/:id/play", asyncHandler(async (req, res) => {
     return {
       penpaShare: puzzle.penpaShare || "",
       textPuzzle: puzzle.textPuzzle || "",
+      // Tells the client to render an answer-input box, WITHOUT ever
+      // sending the actual answer — that's only ever compared
+      // server-side, in /answer below.
+      hasTextAnswer: !!puzzle.textAnswer,
       successMessage: puzzle.successMessage || "Congratulations",
       startedAt: start.startedAt,
       alreadySolved: !!completion,
@@ -175,28 +208,44 @@ router.post("/:id/complete", asyncHandler(async (req, res) => {
     const puzzle = db.puzzles.find((p) => p.id === req.params.id);
     if (!puzzle) return { error: "Unknown puzzle." };
 
-    const existing = db.completions.find((c) => c.userId === req.user.id && c.puzzleId === puzzle.id);
-    let completion, alreadyRecorded;
+    const { completion, alreadyRecorded } = recordCompletionIfNeeded(db, req.user.id, puzzle, auto);
+    return {
+      completion,
+      alreadyRecorded,
+      puzzleTitle: puzzle.title,
+      puzzleDate: puzzle.date,
+      stats: computeUserStats(db, req.user.id),
+    };
+  });
 
-    if (existing) {
-      completion = existing;
-      alreadyRecorded = true;
-    } else {
-      const start = db.starts.find((s) => s.userId === req.user.id && s.puzzleId === puzzle.id);
-      const startedAt = start ? new Date(start.startedAt) : null;
-      const solvedAt = new Date();
-      completion = {
-        userId: req.user.id,
-        puzzleId: puzzle.id,
-        solvedAt: solvedAt.toISOString(),
-        timeMs: startedAt ? solvedAt.getTime() - startedAt.getTime() : null,
-        auto,
-      };
-      db.completions.push(completion);
-      alreadyRecorded = false;
+  if (result.error) return res.status(404).json(result);
+  res.json(result);
+}));
+
+// POST /api/puzzles/:id/answer — for text-answer puzzles (competition
+// or word puzzles with no grid): the solver types an answer, it's
+// checked server-side against `textAnswer` (never sent to the client),
+// and a correct answer records the completion in the same step —
+// there's no separate "mark as solved" action, since submitting the
+// right answer already proves it.
+router.post("/:id/answer", asyncHandler(async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: "Sign in to submit an answer." });
+  const submitted = String((req.body && req.body.answer) || "").trim();
+  if (!submitted) return res.status(400).json({ error: "Enter an answer." });
+
+  const today = todayStr(config.RELEASE_TIMEZONE);
+  const result = await withDb((db) => {
+    const puzzle = db.puzzles.find((p) => p.id === req.params.id);
+    if (!isReleased(puzzle, today)) return { error: "This puzzle isn't available yet." };
+    if (!puzzle.textAnswer) return { error: "This puzzle isn't set up for answer verification." };
+
+    if (normalizeAnswer(submitted) !== normalizeAnswer(puzzle.textAnswer)) {
+      return { correct: false };
     }
 
+    const { completion, alreadyRecorded } = recordCompletionIfNeeded(db, req.user.id, puzzle, true);
     return {
+      correct: true,
       completion,
       alreadyRecorded,
       puzzleTitle: puzzle.title,

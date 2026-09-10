@@ -60,26 +60,31 @@
             <input id="f-type" required placeholder="Fillomino">
           </div>
           <div class="field">
-            <label for="f-difficulty">Difficulty</label>
-            <select id="f-difficulty" required>
-              <option value="">Select…</option>
-              <option>Easy</option>
-              <option>Medium</option>
-              <option>Hard</option>
-              <option>Insane</option>
-            </select>
+            <label>Difficulty</label>
+            <div class="star-picker" data-star-picker>
+              <button type="button" class="star" data-star="1">★</button>
+              <button type="button" class="star" data-star="2">★</button>
+              <button type="button" class="star" data-star="3">★</button>
+              <button type="button" class="star" data-star="4">★</button>
+              <button type="button" class="star" data-star="5">★</button>
+            </div>
+            <input type="hidden" id="f-difficulty" required>
           </div>
           <div class="field">
             <label for="f-author">Author</label>
             <input id="f-author" required placeholder="Your name">
           </div>
           <div class="field">
-            <label for="f-share">Penpa share string (optional if you fill in the text description below instead)</label>
+            <label for="f-share">Penpa share string (optional if you use the text description or answer-verification fields below instead)</label>
             <textarea id="f-share" rows="3" placeholder="Everything after the &quot;#&quot; in penpa's &quot;URL with answer check&quot; link"></textarea>
           </div>
           <div class="field">
-            <label for="f-text-puzzle">Text puzzle description (optional if you provide a Penpa share string above)</label>
+            <label for="f-text-puzzle">Text puzzle description (optional)</label>
             <textarea id="f-text-puzzle" rows="4" placeholder="Describe the puzzle in words if there's no penpa link — shown on the solve page instead of an interactive grid, with a manual &quot;mark as solved&quot; button since there's no way to auto-check it."></textarea>
+          </div>
+          <div class="field">
+            <label for="f-answer">Correct answer (optional) — for word/competition-style puzzles checked by typed answer instead of a grid or manual button</label>
+            <input id="f-answer" placeholder="e.g. RIVERBANK">
           </div>
           <div class="field">
             <label for="f-success">Success message (only used if you provided a Penpa link)</label>
@@ -123,6 +128,7 @@
 
 <script src="/js/api.js"></script>
 <script src="/js/nav.js"></script>
+<script src="/js/star-picker.js"></script>
 <script src="/admin/js/admin.js"></script>
 </body>
 </html>

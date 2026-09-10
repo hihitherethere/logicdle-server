@@ -50,6 +50,14 @@
 
   <div class="text-puzzle-block" id="text-puzzle-block" hidden></div>
 
+  <div id="answer-block" hidden style="margin-top: 4px;">
+    <form class="comment-form" id="answer-form">
+      <input type="text" id="answer-input" placeholder="Type your answer…" autocomplete="off" required>
+      <button class="btn btn-primary" type="submit">Submit answer</button>
+    </form>
+    <p class="form-error" id="answer-error"></p>
+  </div>
+
   <div class="solve-strip">
     <div class="solve-status" id="solve-status">
       <span class="dot"></span>
@@ -76,6 +84,7 @@
 <script src="/js/api.js"></script>
 <script src="/js/nav.js"></script>
 <script src="/js/solve-detect.js"></script>
+<script src="/js/star-picker.js"></script>
 <script>
 (function () {
   var puzzleId = new URLSearchParams(location.search).get("puzzle");
@@ -88,6 +97,10 @@
   var solvedStamp = document.getElementById("solved-stamp");
   var textPuzzleBlock = document.getElementById("text-puzzle-block");
   var manualSolveBtn = document.getElementById("manual-solve-btn");
+  var answerBlock = document.getElementById("answer-block");
+  var answerForm = document.getElementById("answer-form");
+  var answerInput = document.getElementById("answer-input");
+  var answerError = document.getElementById("answer-error");
 
   var solvedBanner = document.getElementById("solved-banner");
   var bannerHeading = document.getElementById("banner-heading");
@@ -255,7 +268,7 @@
     document.getElementById("puzzle-title").textContent = meta.title;
     document.getElementById("meta-date").textContent = meta.date;
     document.getElementById("meta-type").textContent = meta.type;
-    document.getElementById("meta-difficulty").textContent = meta.difficulty;
+    document.getElementById("meta-difficulty").textContent = StarPicker.render(meta.difficulty);
     document.getElementById("meta-author").textContent = "by " + meta.author;
     document.title = meta.title + " — Logicdle";
 
@@ -266,6 +279,7 @@
     renderContentBlock(document.getElementById("rules-body"), document.getElementById("rules-images"), meta.rules);
 
     var hasPenpa = !!play.penpaShare;
+    var hasAnswerMode = !hasPenpa && !!play.hasTextAnswer;
 
     if (play.alreadySolved) {
       solvedStamp.hidden = false;
@@ -276,18 +290,61 @@
     } else {
       startTimer(play.startedAt);
       statusEl.className = "solve-status is-watching";
-      statusText.textContent = hasPenpa ? "Watching for a correct answer…" : "Mark it solved once you're done";
+      statusText.textContent = hasPenpa
+        ? "Watching for a correct answer…"
+        : hasAnswerMode
+        ? "Type your answer below"
+        : "Mark it solved once you're done";
     }
 
     if (hasPenpa) {
       createIframe(play);
+    } else if (hasAnswerMode) {
+      // Competition/word-puzzle mode: the puzzle's actual content lives
+      // in rules/extras (already rendered above); this is just the
+      // answer box. Submitting the correct answer both verifies it
+      // server-side AND records the completion in one step — there's no
+      // separate "mark as solved" button for this mode either, since
+      // proving the answer right IS the completion action.
+      frameShell.hidden = true;
+      resetBtn.hidden = true;
+      if (!play.alreadySolved) {
+        answerBlock.hidden = false;
+        answerForm.addEventListener("submit", function (e) {
+          e.preventDefault();
+          answerError.textContent = "";
+          var answer = answerInput.value.trim();
+          if (!answer) return;
+          var submitBtn = answerForm.querySelector("button");
+          submitBtn.disabled = true;
+          Api.post("/api/puzzles/" + encodeURIComponent(puzzleId) + "/answer", { answer: answer })
+            .then(function (res) {
+              submitBtn.disabled = false;
+              if (!res.correct) {
+                answerError.textContent = "Not quite — try again.";
+                answerInput.select();
+                return;
+              }
+              statusEl.className = "solve-status is-solved";
+              statusText.textContent = "Solved";
+              solvedStamp.hidden = false;
+              answerBlock.hidden = true;
+              stopTimer();
+              showSolvedBanner(res);
+            })
+            .catch(function (err) {
+              submitBtn.disabled = false;
+              answerError.textContent = err.message;
+            });
+        });
+      }
     } else {
-      // No penpa link for this puzzle — show its plain-text content
-      // instead of the grid. There's no way to automatically detect a
-      // solve without an interactive grid, so this is the one case
-      // where a manual "I've solved it" button makes sense — it isn't
-      // redundant with automatic checking here, since there IS no
-      // automatic checking possible for this puzzle.
+      // No penpa link and no answer-verification for this puzzle — show
+      // its plain-text content instead of the grid. There's no way to
+      // automatically detect a solve without an interactive grid or a
+      // checkable answer, so this is the one case where a manual "I've
+      // solved it" button makes sense — it isn't redundant with
+      // automatic checking here, since none is possible for this puzzle.
       frameShell.hidden = true;
       resetBtn.hidden = true;
       textPuzzleBlock.hidden = false;

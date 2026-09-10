@@ -57,10 +57,13 @@
       author: document.getElementById("f-author"),
       share: document.getElementById("f-share"),
       textPuzzle: document.getElementById("f-text-puzzle"),
+      textAnswer: document.getElementById("f-answer"),
       success: document.getElementById("f-success"),
       rules: document.getElementById("f-rules"),
       extras: document.getElementById("f-extras"),
     };
+
+    var difficultyPicker = StarPicker.init(document.querySelector("[data-star-picker]"), fields.difficulty, 3);
 
     var editingId = null; // null = creating a new puzzle
     var rulesImages = [];
@@ -100,6 +103,7 @@
       editingId = null;
       form.reset();
       fields.success.value = "Congratulations";
+      difficultyPicker.setValue(3);
       dateModeAuto.checked = true;
       updateDateModeUI();
       setList(rulesImages, []);
@@ -120,10 +124,11 @@
       dateInput.value = p.date;
       fields.title.value = p.title;
       fields.type.value = p.type;
-      fields.difficulty.value = p.difficulty;
+      difficultyPicker.setValue(p.difficulty);
       fields.author.value = p.author;
       fields.share.value = p.penpaShare || "";
       fields.textPuzzle.value = p.textPuzzle || "";
+      fields.textAnswer.value = p.textAnswer || "";
       fields.success.value = p.successMessage || "Congratulations";
       fields.rules.value = (p.rules && p.rules.text) || "";
       fields.extras.value = (p.extras && p.extras.text) || "";
@@ -151,7 +156,7 @@
           row.className = "puzzle-row";
           row.innerHTML =
             '<div class="meta"><div class="t">' + escapeHtml(p.title) + '</div>' +
-            '<div class="d">' + p.date + " · " + escapeHtml(p.type) + '</div></div>' +
+            '<div class="d">' + p.date + " · " + escapeHtml(p.type) + " · " + StarPicker.render(p.difficulty) + '</div></div>' +
             '<div class="actions"><button data-act="edit">Edit</button><button data-act="delete" class="danger">Delete</button></div>';
           row.querySelector('[data-act="edit"]').addEventListener("click", function () {
             Api.get("/api/admin/puzzles/" + encodeURIComponent(p.id)).then(function (r) { loadIntoForm(r.puzzle); });
@@ -180,10 +185,11 @@
       var payload = {
         title: fields.title.value.trim(),
         type: fields.type.value.trim(),
-        difficulty: fields.difficulty.value.trim(),
+        difficulty: fields.difficulty.value,
         author: fields.author.value.trim(),
         penpaShare: fields.share.value.trim(),
         textPuzzle: fields.textPuzzle.value.trim(),
+        textAnswer: fields.textAnswer.value.trim(),
         successMessage: fields.success.value.trim() || "Congratulations",
         rulesText: fields.rules.value,
         rulesImages: rulesImages,

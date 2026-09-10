@@ -4,49 +4,43 @@ const router = express.Router();
 
 const { withDb } = require("../lib/db");
 const { requireAuth } = require("../middleware/auth");
+const { todayStr } = require("../lib/dates");
+const config = require("../config");
 const asyncHandler = require("../lib/asyncHandler");
 
 router.use(requireAuth);
 
 /**
- * Scoring, matching Advent of Code's local-leaderboard mechanic: for
- * each puzzle, look only at completions from THIS leaderboard's members
- * (not everyone on the site), rank them by how early they solved it
- * (solvedAt timestamp — earliest first), and award points as
- * (member-count-who-solved-it - rank + 1). Sum across every puzzle for
- * each member's total score. This rewards relative standing within your
- * own group, not raw solve speed against the whole site.
+ * Per-day results, NOT a cumulative score. For every RELEASED puzzle
+ * whose day has actually passed (date < today — a puzzle dated today is
+ * deliberately excluded, so solving-in-progress never leaks who's ahead
+ * while people are still working on it) this returns that day's
+ * completions from THIS leaderboard's members, ranked fastest-to-slowest
+ * by actual solve time. There's no AoC-style point system and nothing
+ * is summed or carried across days — this is recomputed fresh from
+ * `db.puzzles`/`db.completions` on every call, so there's no separate
+ * leaderboard-specific history being kept anywhere; once you stop
+ * looking at a given day, its ranking isn't "stored" by this feature
+ * any more than the underlying completions already were.
  */
-function computeStandings(db, leaderboard) {
+function computeDailyResults(db, leaderboard, today) {
   const memberIds = leaderboard.memberIds;
-  const members = db.users.filter((u) => memberIds.includes(u.id));
+  const pastPuzzles = db.puzzles
+    .filter((p) => p.date < today)
+    .sort((a, b) => b.date.localeCompare(a.date)); // most recent past day first
 
-  const scoreByUser = {};
-  const solvedByUser = {};
-  members.forEach((u) => { scoreByUser[u.id] = 0; solvedByUser[u.id] = 0; });
-
-  const relevantCompletions = db.completions.filter((c) => memberIds.includes(c.userId));
-  const puzzleIds = Array.from(new Set(relevantCompletions.map((c) => c.puzzleId)));
-
-  puzzleIds.forEach((puzzleId) => {
-    const entries = relevantCompletions
-      .filter((c) => c.puzzleId === puzzleId)
-      .sort((a, b) => new Date(a.solvedAt) - new Date(b.solvedAt));
-    const n = entries.length;
-    entries.forEach((c, idx) => {
-      scoreByUser[c.userId] = (scoreByUser[c.userId] || 0) + (n - idx);
-      solvedByUser[c.userId] = (solvedByUser[c.userId] || 0) + 1;
-    });
-  });
-
-  const standings = members.map((u) => ({
-    userId: u.id,
-    username: u.username,
-    score: scoreByUser[u.id] || 0,
-    solved: solvedByUser[u.id] || 0,
-  }));
-  standings.sort((a, b) => b.score - a.score || b.solved - a.solved || a.username.localeCompare(b.username));
-  return standings;
+  return pastPuzzles
+    .map((p) => {
+      const results = db.completions
+        .filter((c) => c.puzzleId === p.id && memberIds.includes(c.userId) && typeof c.timeMs === "number")
+        .sort((a, b) => a.timeMs - b.timeMs)
+        .map((c, idx) => {
+          const user = db.users.find((u) => u.id === c.userId);
+          return { rank: idx + 1, username: user ? user.username : "(unknown)", timeMs: c.timeMs };
+        });
+      return { puzzleId: p.id, date: p.date, title: p.title, results };
+    })
+    .filter((day) => day.results.length > 0); // skip days nobody on this leaderboard solved
 }
 
 function newJoinCode() {
@@ -119,17 +113,19 @@ router.get("/mine", asyncHandler(async (req, res) => {
   res.json({ leaderboards: list.map((l) => summarize(l, req.user.id)) });
 }));
 
-// GET /api/leaderboards/:id — full standings. Members only.
+// GET /api/leaderboards/:id — per-day results (only for days that have
+// passed). Members only.
 router.get("/:id", asyncHandler(async (req, res) => {
+  const today = todayStr(config.RELEASE_TIMEZONE);
   const result = await withDb((db) => {
     const lb = db.leaderboards.find((l) => l.id === req.params.id);
     if (!lb) return { error: "Not found." };
     if (!lb.memberIds.includes(req.user.id)) return { error: "You're not a member of this leaderboard." };
-    return { leaderboard: lb, standings: computeStandings(db, lb) };
+    return { leaderboard: lb, days: computeDailyResults(db, lb, today) };
   });
 
   if (result.error) return res.status(result.error.includes("member") ? 403 : 404).json(result);
-  res.json({ leaderboard: summarize(result.leaderboard, req.user.id), standings: result.standings });
+  res.json({ leaderboard: summarize(result.leaderboard, req.user.id), days: result.days });
 }));
 
 // POST /api/leaderboards/:id/leave

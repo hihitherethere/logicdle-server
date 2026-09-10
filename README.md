@@ -120,19 +120,19 @@ client-visible timer is just a display, not the source of truth.
    rules text and any rule images you uploaded in the admin panel, and
    a **Continue** button.
 3. Continue calls `POST /api/puzzles/:id/play`, which checks you're
-   signed in and the puzzle is released, then hands back either the
-   penpa share string or plain-text puzzle content (see "Penpa link vs.
-   text puzzles" below) and starts the server-side timer.
+   signed in and the puzzle is released, then hands back whichever
+   content mode the puzzle uses (see "Three ways to present a puzzle"
+   below) and starts the server-side timer.
 4. **Solve page** (`solve.html?puzzle=<id>`) — top to bottom: any
    **extra content** you added for this puzzle (text/images, shown only
-   if you added any), then either the penpa iframe (auto-sized to its
-   content, so it never needs its own scrollbar) with a **Reset board**
-   button, or — for text-only puzzles — the puzzle's text content and a
-   manual **I've solved it** button, and finally the **rules** again
-   underneath for reference while solving. On success it posts to
-   `/complete` and shows an inline **Solved** banner with a **Copy
-   stats** button that copies a short share-ready summary (puzzle, time,
-   streak) to the clipboard.
+   if you added any), then the puzzle itself in whichever mode applies
+   (penpa iframe with a **Reset board** button, an answer box, or plain
+   text with a manual **I've solved it** button), and finally the
+   **rules** again underneath for reference while solving. On success it
+   posts to `/complete` (or the answer is verified via `/answer`) and
+   shows an inline **Solved** banner with a **Copy stats** button that
+   copies a short share-ready summary (puzzle, time, streak) to the
+   clipboard.
 5. **Archive page** (`archive.html`) — every released puzzle, searchable
    by title/type/author, filterable by difficulty, sortable (newest,
    oldest, most/least solved, fastest/slowest average time), paginated
@@ -145,18 +145,33 @@ client-visible timer is just a display, not the source of truth.
 7. **Leaderboards** (`leaderboards.html`) — create or join a private
    group leaderboard (see "Leaderboards" below).
 
-## Penpa link vs. text puzzles
+## Three ways to present a puzzle
 
-Every puzzle needs either a `penpaShare` string or plain **text puzzle
-content** — at least one is required, both admin and submission forms
-enforce this. Text content is meant as a fallback for puzzle types
-penpa doesn't represent well, or for submitters who don't know how to
-generate a penpa link: the solve page shows it as plain text in place
-of the interactive grid. Since there's no interactive grid, there's
-also no way to auto-detect a solve — that's the one case where the
-solve page still shows a manual **I've solved it** button (it isn't
-redundant with automatic checking there, since no automatic checking is
-possible without a grid to watch).
+Every puzzle needs at least one of these — admin and submission forms
+both enforce it:
+
+- **Penpa share string** — the interactive grid, with automatic solve
+  detection (see "Why penpa-edit is embedded same-origin" above).
+- **Text puzzle content** — plain text shown in place of the grid, for
+  puzzle types penpa doesn't represent well. There's no way to
+  auto-detect a solve without an interactive grid, so this is the one
+  case where the solve page shows a manual **I've solved it** button —
+  it isn't redundant with automatic checking here, since none is
+  possible for this puzzle. (Admin-form only — see "Puzzle submissions"
+  below for why it's not in the submission form.)
+- **Text answer** — for word/competition-style puzzles: the solver
+  types an answer into a box on the solve page (the puzzle's actual
+  content/prompt lives in the rules or extras text, same as any other
+  puzzle) and it's checked **server-side** (`POST /api/puzzles/:id/answer`
+  in `routes/puzzles.js`) against a stored answer that's never sent to
+  the client — same spoiler-protection pattern as `penpaShare`. A
+  correct answer records the completion in the same step, so there's no
+  separate "mark as solved" button for this mode either: submitting the
+  right answer already proves it. The comparison is case- and
+  whitespace-insensitive.
+
+If a puzzle has more than one of these set, `solve.html` picks in that
+order — penpa link first, then text-answer, then plain text.
 
 ## Admin: creating puzzles, rules, and extra content
 
@@ -172,11 +187,13 @@ puzzles. A few things worth knowing:
   queued latest — or the puzzle's own release day if there are no
   puzzles yet — so you can just keep adding puzzles without tracking
   dates yourself. Choose **Manual** to pick a specific date instead.
-- **Penpa share string / text puzzle content**: at least one is
-  required — see "Penpa link vs. text puzzles" above.
-- **Difficulty**: a fixed dropdown (Easy / Medium / Hard / Insane)
-  rather than free text, so the archive's difficulty filter has
-  something consistent to match against.
+- **Penpa share string / text puzzle content / correct answer**: at
+  least one is required — see "Three ways to present a puzzle" above.
+- **Difficulty**: a 1-5 star picker (`public/js/star-picker.js`,
+  shared by every form and every display of difficulty across the
+  site) rather than free text or named tiers, stored as a plain integer
+  1-5 — so the archive's difficulty filter and sort have something
+  numeric and consistent to work with.
 - **Extra content**: optional text/images shown **above** the puzzle on
   the solve page — a note, a hint, context, whatever you want solvers
   to see before they start.
@@ -205,18 +222,24 @@ final list of image URLs alongside the corresponding text.
 
 ## Puzzle submissions
 
-Any signed-in user can submit a puzzle at `/submit.html` — the same
-fields as the admin's own creation form (title, type, difficulty,
-author, penpa link or text content, success message, rules, extras),
-minus a date field: **submitters never choose a release date**, only
-an admin does, at accept-time. Submitters can add an optional note for
-the reviewer, and the submitter and any admin can go back and forth in
-a comment thread on the submission afterward.
+Any signed-in user can submit a puzzle at `/submit.html` — mostly the
+same fields as the admin's own creation form (title, type, a 1-5 star
+difficulty picker, author, success message, rules, extras), minus a
+date field: **submitters never choose a release date**, only an admin
+does, at accept-time. The submission form offers **penpa link** or
+**text answer** as content modes — not the plain-text "text puzzle
+content" mode, since anything you'd put there fits in the "extra
+content" field instead, so the submission form only offers the two
+modes that need special server handling (a penpa link, or a verified
+answer). Submitters can add an optional note for the reviewer, and the
+submitter and any admin can go back and forth in a comment thread on
+the submission afterward.
 
 Admins review at `/admin/submissions.html` (linked from the main admin
 page, and from the nav once signed in as an admin): filter by status
 (Pending / Accepted / Rejected / All), edit any field on a pending
-submission before deciding, leave comments, and either:
+submission before deciding — including switching between content modes
+— leave comments, and either:
 
 - **Accept & publish** — creates a real puzzle from the submission's
   fields, using the same automatic-date placement as the admin's own
@@ -232,17 +255,22 @@ disappear once its status leaves "pending."
 
 Any signed-in user can create a private leaderboard at
 `/leaderboards.html` and share its 6-character join code with others
-(no account/leaderboard limit, no admin involvement). Scoring works
-like [Advent of Code's local leaderboards](https://adventofcode.com/2026/leaderboard/self):
-for each puzzle, only completions from that leaderboard's own members
-are considered, ranked by how early each member solved it (earliest
-`solvedAt` timestamp — not raw solve *duration*, matching AoC's actual
-mechanic); the fastest-to-finish member gets N points (N = how many
-members solved that puzzle), second gets N-1, down to 1 point for
-last place. Points sum across every puzzle for each member's total
-score. `routes/leaderboards.js`'s `computeStandings()` is the whole
-implementation, and it's recomputed fresh on every page load rather
-than stored — there's nothing to keep in sync.
+(no account/leaderboard limit, no admin involvement). This is
+deliberately **not** Advent-of-Code-style cumulative scoring — there's
+no running point total, and nothing leaderboard-specific is stored past
+what's needed to know who's a member:
+
+- For each puzzle, results only appear on the leaderboard **once that
+  day has passed** (`date < today` in the release timezone) — a puzzle
+  dated today never shows any data, so nobody can see who's ahead while
+  people are still solving it.
+- What's shown is each member's **actual solve time**, ranked
+  fastest-to-slowest, for each qualifying day — not points, and nothing
+  summed across days.
+- `computeDailyResults()` in `routes/leaderboards.js` recomputes this
+  fresh from `db.puzzles`/`db.completions` on every request; the
+  leaderboard record itself only stores its name, owner, join code, and
+  member list — no scores or history live anywhere.
 
 ## Data storage
 
@@ -318,7 +346,15 @@ nothing session-related is trusted from the client.
    into your project automatically.
 5. **Attach Blob storage**: same **Storage** tab → **Create Database** →
    **Blob** → connect it to this project. This injects
-   `BLOB_READ_WRITE_TOKEN` automatically.
+   `BLOB_READ_WRITE_TOKEN` automatically. **Make sure you select Public
+   access when creating it, not Private** — Vercel Blob's access mode is
+   fixed at store creation and can't be changed afterward, and rule/extras
+   images need to be viewable by anyone browsing the archive, even
+   logged out. If you end up with a Private store, uploads fail with
+   "Cannot use public access on a private store" (`put()` in
+   `routes/admin.js`/`routes/submissions.js` always uploads with
+   `access: "public"`) — the fix is to create a new store as Public and
+   reconnect it, since there's no toggle to change an existing store's mode.
 6. **Set the remaining environment variables**: project → **Settings**
    → **Environment Variables** → add `RELEASE_TIMEZONE`,
    `ADMIN_USERNAMES`, and `COOKIE_SECRET` (see the table below for what
@@ -335,7 +371,11 @@ specific integration used and adjust the two `process.env.…` lines at
 the top of `getClient()` in `lib/db.js` to match — Marketplace
 integrations have varied their exact naming over time, and I can't
 verify the current exact names without being able to actually walk
-through the Vercel dashboard from here.
+through the Vercel dashboard from here. One case already handled: if
+you set a custom "URL prefix" (e.g. `STORAGE`) when connecting the
+Redis store, `getClient()` also checks `STORAGE_KV_REST_API_URL` /
+`STORAGE_KV_REST_API_TOKEN` as a fallback — no code change needed for
+that specific case.
 
 ## Environment variables
 
@@ -362,20 +402,20 @@ lib/auth.js                    password hashing, session tokens
 lib/dates.js                   server-side "what day is it" (release gate) + addDays()
 middleware/auth.js             session lookup, requireAuth / requireAdmin
 routes/auth.js                 register / login / logout / me
-routes/puzzles.js              today / archive (search/sort/paginate client-side, solve stats server-computed) / rules / play / complete
-routes/admin.js                puzzle CRUD (random id, auto/manual date, text-puzzle support), image upload (Vercel Blob), submission review
+routes/puzzles.js              today / archive (search/sort/paginate client-side, solve stats server-computed) / rules / play / complete / answer
+routes/admin.js                puzzle CRUD (random id, auto/manual date, star difficulty, 3 content modes), image upload (Vercel Blob), submission review
 routes/submissions.js          user-facing puzzle submission: create / list own / comment / image upload
-routes/leaderboards.js         create / join / standings / leave — AoC-style scoring
+routes/leaderboards.js         create / join / per-day results (only once a day has passed) / leave
 public/index.html              home
-public/archive.html            archive — search, difficulty filter, sort, pagination
+public/archive.html            archive — search, star-difficulty filter, sort, pagination
 public/rules.html              rules + Continue
-public/solve.html              extras + penpa embed (no scrollbar) OR text-puzzle block + rules + reset + inline solved banner/share
+public/solve.html              extras + puzzle (penpa embed, answer box, or text block) + rules + reset + inline solved banner/share
 public/submit.html             puzzle submission form + "your submissions" with comment threads
 public/leaderboards.html       create/join a leaderboard
-public/leaderboard.html        one leaderboard's standings
+public/leaderboard.html        one leaderboard's per-day results
 public/login.html, register.html
 public/admin/index.html, admin/js/admin.js       puzzle CRUD
 public/admin/submissions.html, admin/js/submissions.js   review/edit/accept/reject submissions
-public/js/api.js, nav.js, solve-detect.js
+public/js/api.js, nav.js, solve-detect.js, star-picker.js
 public/penpa-edit/             ← clone penpa-edit's docs/ folder here (see its own README)
 ```

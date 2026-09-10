@@ -49,6 +49,7 @@
 
 <script src="/js/api.js"></script>
 <script src="/js/nav.js"></script>
+<script src="/js/star-picker.js"></script>
 <script>
 (function () {
   var params = new URLSearchParams(location.search);
@@ -70,7 +71,7 @@
       document.getElementById("puzzle-title").textContent = p.title;
       document.getElementById("meta-date").textContent = p.date;
       document.getElementById("meta-type").textContent = p.type;
-      document.getElementById("meta-difficulty").textContent = p.difficulty;
+      document.getElementById("meta-difficulty").textContent = StarPicker.render(p.difficulty);
       document.getElementById("meta-author").textContent = "by " + p.author;
 
       var rulesText = (p.rules && p.rules.text) || "No rules have been written for this puzzle yet — standard rules for the genre apply.";

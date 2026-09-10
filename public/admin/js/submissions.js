@@ -55,15 +55,11 @@
 
         '<div class="field" style="margin-top:14px;"><label>Title</label><input data-f="title" value="' + escapeHtml(sub.title) + '" ' + (editable ? "" : "disabled") + "></div>" +
         '<div class="field"><label>Type</label><input data-f="type" value="' + escapeHtml(sub.type) + '" ' + (editable ? "" : "disabled") + "></div>" +
-        '<div class="field"><label>Difficulty</label>' +
-          '<select data-f="difficulty" ' + (editable ? "" : "disabled") + ">" +
-            ["Easy", "Medium", "Hard", "Insane"].map(function (d) {
-              return '<option' + (sub.difficulty === d ? " selected" : "") + ">" + d + "</option>";
-            }).join("") +
-          "</select></div>" +
+        '<div class="field"><label>Difficulty</label>' + StarPicker.pickerHtml("difficulty", editable) + "</div>" +
         '<div class="field"><label>Author</label><input data-f="author" value="' + escapeHtml(sub.author) + '" ' + (editable ? "" : "disabled") + "></div>" +
         '<div class="field"><label>Penpa share string</label><textarea data-f="penpaShare" rows="2" ' + (editable ? "" : "disabled") + ">" + escapeHtml(sub.penpaShare || "") + "</textarea></div>" +
         '<div class="field"><label>Text puzzle content</label><textarea data-f="textPuzzle" rows="3" ' + (editable ? "" : "disabled") + ">" + escapeHtml(sub.textPuzzle || "") + "</textarea></div>" +
+        '<div class="field"><label>Correct answer (text-verification mode)</label><input data-f="textAnswer" value="' + escapeHtml(sub.textAnswer || "") + '" ' + (editable ? "" : "disabled") + "></div>" +
         '<div class="field"><label>Rules text</label><textarea data-f="rulesText" rows="4" ' + (editable ? "" : "disabled") + ">" + escapeHtml((sub.rules && sub.rules.text) || "") + "</textarea></div>" +
         '<div class="field"><label>Extra content text</label><textarea data-f="extrasText" rows="2" ' + (editable ? "" : "disabled") + ">" + escapeHtml((sub.extras && sub.extras.text) || "") + "</textarea></div>" +
 
@@ -83,6 +79,7 @@
           : "");
 
       renderComments(sub, card.querySelector("[data-comments]"));
+      StarPicker.init(card.querySelector("[data-star-picker]"), card.querySelector('[data-f="difficulty"]'), sub.difficulty);
 
       card.querySelector("[data-comment-form]").addEventListener("submit", function (e) {
         e.preventDefault();

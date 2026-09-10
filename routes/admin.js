@@ -74,19 +74,24 @@ function autoDate(db) {
 }
 
 function validate(body) {
-  const required = ["title", "type", "difficulty", "author"];
+  const required = ["title", "type", "author"]; // difficulty checked separately below (numeric 1-5)
   for (const key of required) {
     if (!body[key] || typeof body[key] !== "string" || !body[key].trim()) {
       return `"${key}" is required.`;
     }
   }
-  // A puzzle needs SOME way to be presented — either a real penpa link,
-  // or plain-text content as a fallback for puzzle types/situations
-  // where a penpa link isn't available yet.
+  const difficulty = Number(body.difficulty);
+  if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5) {
+    return '"difficulty" must be a whole number from 1 to 5 (stars).';
+  }
+  // A puzzle needs SOME way to be presented — a real penpa link, plain
+  // text content, or a text answer to verify (for word/competition
+  // puzzles with no grid at all).
   const hasPenpa = body.penpaShare && body.penpaShare.trim();
   const hasText = body.textPuzzle && body.textPuzzle.trim();
-  if (!hasPenpa && !hasText) {
-    return "Provide either a Penpa share string or text puzzle content.";
+  const hasAnswer = body.textAnswer && body.textAnswer.trim();
+  if (!hasPenpa && !hasText && !hasAnswer) {
+    return "Provide a Penpa share string, text puzzle content, or a text answer.";
   }
   // Date is optional on create (falls back to automatic placement), but
   // if one IS given (manual mode), it has to be well-formed.
@@ -107,10 +112,11 @@ router.post("/puzzles", asyncHandler(async (req, res) => {
       date: body.date && body.date.trim() ? body.date.trim() : autoDate(db),
       title: body.title,
       type: body.type,
-      difficulty: body.difficulty,
+      difficulty: Number(body.difficulty),
       author: body.author,
       penpaShare: body.penpaShare || "",
       textPuzzle: body.textPuzzle || "",
+      textAnswer: body.textAnswer || "",
       successMessage: body.successMessage || "Congratulations",
       rules: {
         text: body.rulesText || "",
@@ -135,19 +141,29 @@ router.put("/puzzles/:id", asyncHandler(async (req, res) => {
   if (body.date && !/^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
     return res.status(400).json({ error: '"date" must be in YYYY-MM-DD form.' });
   }
+  if (body.difficulty !== undefined && body.difficulty !== "") {
+    const d = Number(body.difficulty);
+    if (!Number.isInteger(d) || d < 1 || d > 5) {
+      return res.status(400).json({ error: '"difficulty" must be a whole number from 1 to 5 (stars).' });
+    }
+  }
 
   const result = await withDb((db) => {
     const puzzle = db.puzzles.find((p) => p.id === req.params.id);
     if (!puzzle) return { error: "Not found." };
 
-    ["date", "title", "type", "difficulty", "author", "successMessage"].forEach((key) => {
+    ["date", "title", "type", "author", "successMessage"].forEach((key) => {
       if (typeof body[key] === "string" && body[key].trim()) puzzle[key] = body[key];
     });
-    // penpaShare / textPuzzle can legitimately be cleared to empty (e.g.
-    // switching from one mode to the other), so these two allow an
+    if (body.difficulty !== undefined && body.difficulty !== "") {
+      puzzle.difficulty = Number(body.difficulty);
+    }
+    // penpaShare / textPuzzle / textAnswer can legitimately be cleared to
+    // empty (e.g. switching from one mode to another), so these allow an
     // explicit empty string through rather than requiring non-blank.
     if (typeof body.penpaShare === "string") puzzle.penpaShare = body.penpaShare;
     if (typeof body.textPuzzle === "string") puzzle.textPuzzle = body.textPuzzle;
+    if (typeof body.textAnswer === "string") puzzle.textAnswer = body.textAnswer;
 
     if (body.rulesText !== undefined || body.rulesImages !== undefined) {
       puzzle.rules = puzzle.rules || { text: "", images: [] };
@@ -212,15 +228,26 @@ router.get("/submissions", asyncHandler(async (req, res) => {
 
 router.put("/submissions/:id", asyncHandler(async (req, res) => {
   const body = req.body || {};
+  if (body.difficulty !== undefined && body.difficulty !== "") {
+    const d = Number(body.difficulty);
+    if (!Number.isInteger(d) || d < 1 || d > 5) {
+      return res.status(400).json({ error: '"difficulty" must be a whole number from 1 to 5 (stars).' });
+    }
+  }
+
   const result = await withDb((db) => {
     const sub = db.submissions.find((s) => s.id === req.params.id);
     if (!sub) return { error: "Not found." };
 
-    ["title", "type", "difficulty", "author", "successMessage"].forEach((key) => {
+    ["title", "type", "author", "successMessage"].forEach((key) => {
       if (typeof body[key] === "string" && body[key].trim()) sub[key] = body[key];
     });
+    if (body.difficulty !== undefined && body.difficulty !== "") {
+      sub.difficulty = Number(body.difficulty);
+    }
     if (typeof body.penpaShare === "string") sub.penpaShare = body.penpaShare;
     if (typeof body.textPuzzle === "string") sub.textPuzzle = body.textPuzzle;
+    if (typeof body.textAnswer === "string") sub.textAnswer = body.textAnswer;
 
     if (body.rulesText !== undefined || body.rulesImages !== undefined) {
       sub.rules = sub.rules || { text: "", images: [] };
@@ -261,10 +288,11 @@ router.post("/submissions/:id/accept", asyncHandler(async (req, res) => {
       date: body.date && body.date.trim() ? body.date.trim() : autoDate(db),
       title: sub.title,
       type: sub.type,
-      difficulty: sub.difficulty,
+      difficulty: Number(sub.difficulty) || 3,
       author: sub.author,
       penpaShare: sub.penpaShare || "",
       textPuzzle: sub.textPuzzle || "",
+      textAnswer: sub.textAnswer || "",
       successMessage: sub.successMessage || "Congratulations",
       rules: sub.rules || { text: "", images: [] },
       extras: sub.extras || { text: "", images: [] },

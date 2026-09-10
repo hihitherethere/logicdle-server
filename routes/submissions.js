@@ -40,16 +40,21 @@ router.post("/images", upload.single("image"), asyncHandler(async (req, res) => 
 }));
 
 function validate(body) {
-  const required = ["title", "type", "difficulty", "author"];
+  const required = ["title", "type", "author"]; // difficulty checked separately (numeric 1-5)
   for (const key of required) {
     if (!body[key] || typeof body[key] !== "string" || !body[key].trim()) {
       return `"${key}" is required.`;
     }
   }
+  const difficulty = Number(body.difficulty);
+  if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5) {
+    return '"difficulty" must be a whole number from 1 to 5 (stars).';
+  }
   const hasPenpa = body.penpaShare && body.penpaShare.trim();
   const hasText = body.textPuzzle && body.textPuzzle.trim();
-  if (!hasPenpa && !hasText) {
-    return "Provide either a Penpa share string or text puzzle content.";
+  const hasAnswer = body.textAnswer && body.textAnswer.trim();
+  if (!hasPenpa && !hasText && !hasAnswer) {
+    return "Provide a Penpa share string or a text answer.";
   }
   return null;
 }
@@ -71,10 +76,11 @@ router.post("/", asyncHandler(async (req, res) => {
       submittedAt: new Date().toISOString(),
       title: body.title,
       type: body.type,
-      difficulty: body.difficulty,
+      difficulty: Number(body.difficulty),
       author: body.author,
       penpaShare: body.penpaShare || "",
       textPuzzle: body.textPuzzle || "",
+      textAnswer: body.textAnswer || "",
       successMessage: body.successMessage || "Congratulations",
       rules: {
         text: body.rulesText || "",

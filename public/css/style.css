@@ -268,6 +268,15 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible, input:focus-vis
   border: 1.5px solid #d6cfbc; border-radius: 3px; background: #fff; color: var(--ink);
 }
 .field textarea { font-family: var(--font-mono); font-size: 0.85rem; resize: vertical; }
+.star-picker { display: flex; gap: 2px; }
+.star-picker .star {
+  font-size: 1.5rem; line-height: 1; background: none; border: none; cursor: pointer;
+  color: #d6cfbc; padding: 2px 1px; transition: color 0.1s ease;
+}
+.star-picker .star:hover:not(:disabled) { color: #c9a227; }
+.star-picker .star.filled { color: var(--pencil); }
+.star-picker .star:disabled { cursor: default; }
+.stars-display { color: var(--pencil); letter-spacing: 1px; }
 .form-error { font-family: var(--font-mono); font-size: 0.82rem; color: var(--danger); min-height: 1em; }
 .form-note { font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-soft); }
 
