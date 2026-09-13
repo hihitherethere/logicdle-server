@@ -62,7 +62,6 @@
       <span class="dot"></span>
       <span id="solve-status-text">Not started</span>
     </div>
-    <button class="btn btn-primary" id="manual-solve-btn" hidden>I've solved it</button>
   </div>
 
   <div class="solved-banner" id="solved-banner" hidden>
@@ -94,7 +93,6 @@
   var statusText = document.getElementById("solve-status-text");
   var solvedStamp = document.getElementById("solved-stamp");
   var textPuzzleBlock = document.getElementById("text-puzzle-block");
-  var manualSolveBtn = document.getElementById("manual-solve-btn");
   var answerBlock = document.getElementById("answer-block");
   var answerForm = document.getElementById("answer-form");
   var answerInput = document.getElementById("answer-input");
@@ -214,13 +212,11 @@
         statusEl.className = "solve-status is-solved";
         statusText.textContent = "Solved";
         solvedStamp.hidden = false;
-        manualSolveBtn.hidden = true;
         stopTimer();
         showSolvedBanner(res);
       })
       .catch(function (err) {
         statusText.textContent = "Couldn't save progress: " + err.message;
-        manualSolveBtn.disabled = false;
       });
   }
 
@@ -267,13 +263,17 @@
       solvedStamp.hidden = false;
     }
 
-    // Deliberately no special-cased "read-only" treatment here: viewing
-    // an already-solved puzzle behaves exactly like starting or
-    // continuing one — same iframe/answer-box/text-block, same timer,
-    // same active detection. The only actual restriction is that there's
-    // no way to reset the board (that button doesn't exist at all
-    // anymore, for any puzzle) — solved or not.
-    startTimer(play.startedAt);
+    // Viewing an already-solved puzzle still shows the actual board (or
+    // answer box) exactly like starting/continuing one — the only two
+    // differences are: the timer shows the time you actually got instead
+    // of counting up again, and there's no reset button (which doesn't
+    // exist at all anymore, for any puzzle, solved or not).
+    if (play.alreadySolved) {
+      timerEl.textContent = formatMs(play.timeMs);
+      timerEl.classList.add("is-stopped");
+    } else {
+      startTimer(play.startedAt);
+    }
     statusEl.className = play.alreadySolved ? "solve-status is-solved" : "solve-status is-watching";
     statusText.textContent = play.alreadySolved
       ? "Solved"
@@ -281,7 +281,7 @@
       ? "Watching for a correct answer…"
       : hasAnswerMode
       ? "Type your answer below"
-      : "Mark it solved once you're done";
+      : "Watching for a correct answer…";
 
     if (hasPenpa) {
       createIframe(play);
@@ -321,20 +321,15 @@
           });
       });
     } else {
-      // No penpa link and no answer-verification for this puzzle — show
-      // its plain-text content instead of the grid. There's no way to
-      // automatically detect a solve without an interactive grid or a
-      // checkable answer, so this is the one case where a manual "I've
-      // solved it" button makes sense — it isn't redundant with
-      // automatic checking here, since none is possible for this puzzle.
+      // No penpa link and no answer-verification for this puzzle — just
+      // show its plain-text content. There's no interactive grid and no
+      // checkable answer, so (with the manual "mark as solved" button
+      // removed) a puzzle in this mode has no way to be completed —
+      // in practice this only applies to older data, since the admin
+      // and submission forms no longer offer a plain-text-only mode.
       frameShell.hidden = true;
       textPuzzleBlock.hidden = false;
       textPuzzleBlock.textContent = play.textPuzzle || "(No puzzle content was provided.)";
-      manualSolveBtn.hidden = false;
-      manualSolveBtn.addEventListener("click", function () {
-        manualSolveBtn.disabled = true;
-        reportComplete(false);
-      });
     }
   }
 

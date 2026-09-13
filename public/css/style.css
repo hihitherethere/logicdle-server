@@ -317,6 +317,23 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible, input:focus-vis
 .completions-table th { font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase; color: var(--ink-soft); }
 
 /* ---------------------------------------------------------------------
+   LEADERBOARD RANK ROWS
+   ------------------------------------------------------------------- */
+.lb-table td:first-child { font-weight: 600; white-space: nowrap; }
+.lb-table tr.lb-rank-1 td { background: #fff3c4; }
+.lb-table tr.lb-rank-2 td { background: #e7e9ec; }
+.lb-table tr.lb-rank-3 td { background: #f4ddc8; }
+.lb-table tr.lb-rank-top10 td { background: #eef1fa; }
+.lb-table tr.lb-you td {
+  background: #dfe9ff;
+  box-shadow: inset 3px 0 0 var(--pencil);
+  font-weight: 700;
+}
+.lb-table tr.lb-rank-1.lb-you td { background: linear-gradient(90deg, #dfe9ff 0%, #fff3c4 100%); }
+.lb-table tr.lb-rank-2.lb-you td { background: linear-gradient(90deg, #dfe9ff 0%, #e7e9ec 100%); }
+.lb-table tr.lb-rank-3.lb-you td { background: linear-gradient(90deg, #dfe9ff 0%, #f4ddc8 100%); }
+
+/* ---------------------------------------------------------------------
    SUBMISSIONS (user-facing submit page + admin review page)
    ------------------------------------------------------------------- */
 .submission-card {
