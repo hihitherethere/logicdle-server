@@ -56,7 +56,6 @@
       difficulty: document.getElementById("f-difficulty"),
       author: document.getElementById("f-author"),
       share: document.getElementById("f-share"),
-      textPuzzle: document.getElementById("f-text-puzzle"),
       textAnswer: document.getElementById("f-answer"),
       success: document.getElementById("f-success"),
       rules: document.getElementById("f-rules"),
@@ -127,7 +126,6 @@
       difficultyPicker.setValue(p.difficulty);
       fields.author.value = p.author;
       fields.share.value = p.penpaShare || "";
-      fields.textPuzzle.value = p.textPuzzle || "";
       fields.textAnswer.value = p.textAnswer || "";
       fields.success.value = p.successMessage || "Congratulations";
       fields.rules.value = (p.rules && p.rules.text) || "";
@@ -188,7 +186,6 @@
         difficulty: fields.difficulty.value,
         author: fields.author.value.trim(),
         penpaShare: fields.share.value.trim(),
-        textPuzzle: fields.textPuzzle.value.trim(),
         textAnswer: fields.textAnswer.value.trim(),
         successMessage: fields.success.value.trim() || "Congratulations",
         rulesText: fields.rules.value,

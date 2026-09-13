@@ -36,7 +36,6 @@
   <div class="solve-toolbar">
     <a href="/archive.html" class="btn">← Archive</a>
     <div class="timer" id="timer">0:00</div>
-    <button class="btn" id="reset-btn">Reset board</button>
   </div>
 
   <div id="extras-block" hidden>
@@ -93,7 +92,6 @@
   var timerEl = document.getElementById("timer");
   var statusEl = document.getElementById("solve-status");
   var statusText = document.getElementById("solve-status-text");
-  var resetBtn = document.getElementById("reset-btn");
   var solvedStamp = document.getElementById("solved-stamp");
   var textPuzzleBlock = document.getElementById("text-puzzle-block");
   var manualSolveBtn = document.getElementById("manual-solve-btn");
@@ -110,7 +108,6 @@
 
   if (!puzzleId) {
     frameShell.innerHTML = '<div class="notice">No puzzle specified. Go back to the <a href="/archive.html">archive</a>.</div>';
-    resetBtn.hidden = true;
     return;
   }
 
@@ -227,8 +224,7 @@
       });
   }
 
-  // ---- building/reloading the puzzle iframe ------------------------------
-  var currentIframe = null;
+  // ---- building the puzzle iframe -----------------------------------------
   function createIframe(play) {
     var iframe = document.createElement("iframe");
     iframe.title = "penpa-edit puzzle solver";
@@ -247,21 +243,7 @@
     });
     frameShell.innerHTML = "";
     frameShell.appendChild(iframe);
-    currentIframe = iframe;
-    currentIframe.__play = play;
   }
-
-  resetBtn.addEventListener("click", function () {
-    if (!currentIframe) return;
-    if (!confirm("Reset the board? Your timer isn't affected — this just clears what you've entered so you can start the grid over.")) return;
-    try { currentIframe.contentWindow.localStorage.clear(); } catch (e) { /* not same-origin */ }
-    var play = currentIframe.__play;
-    var l = document.createElement("div");
-    l.className = "penpa-loading";
-    l.textContent = "resetting…";
-    frameShell.appendChild(l);
-    createIframe(play);
-  });
 
   function begin(meta, play) {
     document.getElementById("puzzle-subtitle").textContent = meta.title;
@@ -283,19 +265,23 @@
 
     if (play.alreadySolved) {
       solvedStamp.hidden = false;
-      statusEl.className = "solve-status is-solved";
-      statusText.textContent = "Already solved — practice mode";
-      timerEl.textContent = formatMs(play.timeMs);
-      timerEl.classList.add("is-stopped");
-    } else {
-      startTimer(play.startedAt);
-      statusEl.className = "solve-status is-watching";
-      statusText.textContent = hasPenpa
-        ? "Watching for a correct answer…"
-        : hasAnswerMode
-        ? "Type your answer below"
-        : "Mark it solved once you're done";
     }
+
+    // Deliberately no special-cased "read-only" treatment here: viewing
+    // an already-solved puzzle behaves exactly like starting or
+    // continuing one — same iframe/answer-box/text-block, same timer,
+    // same active detection. The only actual restriction is that there's
+    // no way to reset the board (that button doesn't exist at all
+    // anymore, for any puzzle) — solved or not.
+    startTimer(play.startedAt);
+    statusEl.className = play.alreadySolved ? "solve-status is-solved" : "solve-status is-watching";
+    statusText.textContent = play.alreadySolved
+      ? "Solved"
+      : hasPenpa
+      ? "Watching for a correct answer…"
+      : hasAnswerMode
+      ? "Type your answer below"
+      : "Mark it solved once you're done";
 
     if (hasPenpa) {
       createIframe(play);
@@ -307,37 +293,33 @@
       // separate "mark as solved" button for this mode either, since
       // proving the answer right IS the completion action.
       frameShell.hidden = true;
-      resetBtn.hidden = true;
-      if (!play.alreadySolved) {
-        answerBlock.hidden = false;
-        answerForm.addEventListener("submit", function (e) {
-          e.preventDefault();
-          answerError.textContent = "";
-          var answer = answerInput.value.trim();
-          if (!answer) return;
-          var submitBtn = answerForm.querySelector("button");
-          submitBtn.disabled = true;
-          Api.post("/api/puzzles/" + encodeURIComponent(puzzleId) + "/answer", { answer: answer })
-            .then(function (res) {
-              submitBtn.disabled = false;
-              if (!res.correct) {
-                answerError.textContent = "Not quite — try again.";
-                answerInput.select();
-                return;
-              }
-              statusEl.className = "solve-status is-solved";
-              statusText.textContent = "Solved";
-              solvedStamp.hidden = false;
-              answerBlock.hidden = true;
-              stopTimer();
-              showSolvedBanner(res);
-            })
-            .catch(function (err) {
-              submitBtn.disabled = false;
-              answerError.textContent = err.message;
-            });
-        });
-      }
+      answerBlock.hidden = false;
+      answerForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        answerError.textContent = "";
+        var answer = answerInput.value.trim();
+        if (!answer) return;
+        var submitBtn = answerForm.querySelector("button");
+        submitBtn.disabled = true;
+        Api.post("/api/puzzles/" + encodeURIComponent(puzzleId) + "/answer", { answer: answer })
+          .then(function (res) {
+            submitBtn.disabled = false;
+            if (!res.correct) {
+              answerError.textContent = "Not quite — try again.";
+              answerInput.select();
+              return;
+            }
+            statusEl.className = "solve-status is-solved";
+            statusText.textContent = "Solved";
+            solvedStamp.hidden = false;
+            stopTimer();
+            showSolvedBanner(res);
+          })
+          .catch(function (err) {
+            submitBtn.disabled = false;
+            answerError.textContent = err.message;
+          });
+      });
     } else {
       // No penpa link and no answer-verification for this puzzle — show
       // its plain-text content instead of the grid. There's no way to
@@ -346,16 +328,13 @@
       // solved it" button makes sense — it isn't redundant with
       // automatic checking here, since none is possible for this puzzle.
       frameShell.hidden = true;
-      resetBtn.hidden = true;
       textPuzzleBlock.hidden = false;
       textPuzzleBlock.textContent = play.textPuzzle || "(No puzzle content was provided.)";
-      if (!play.alreadySolved) {
-        manualSolveBtn.hidden = false;
-        manualSolveBtn.addEventListener("click", function () {
-          manualSolveBtn.disabled = true;
-          reportComplete(false);
-        });
-      }
+      manualSolveBtn.hidden = false;
+      manualSolveBtn.addEventListener("click", function () {
+        manualSolveBtn.disabled = true;
+        reportComplete(false);
+      });
     }
   }
 
@@ -377,7 +356,6 @@
         return;
       }
       frameShell.innerHTML = '<div class="notice">' + err.message + "</div>";
-      resetBtn.hidden = true;
     });
 })();
 </script>

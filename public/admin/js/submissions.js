@@ -58,7 +58,6 @@
         '<div class="field"><label>Difficulty</label>' + StarPicker.pickerHtml("difficulty", editable) + "</div>" +
         '<div class="field"><label>Author</label><input data-f="author" value="' + escapeHtml(sub.author) + '" ' + (editable ? "" : "disabled") + "></div>" +
         '<div class="field"><label>Penpa share string</label><textarea data-f="penpaShare" rows="2" ' + (editable ? "" : "disabled") + ">" + escapeHtml(sub.penpaShare || "") + "</textarea></div>" +
-        '<div class="field"><label>Text puzzle content</label><textarea data-f="textPuzzle" rows="3" ' + (editable ? "" : "disabled") + ">" + escapeHtml(sub.textPuzzle || "") + "</textarea></div>" +
         '<div class="field"><label>Correct answer (text-verification mode)</label><input data-f="textAnswer" value="' + escapeHtml(sub.textAnswer || "") + '" ' + (editable ? "" : "disabled") + "></div>" +
         '<div class="field"><label>Rules text</label><textarea data-f="rulesText" rows="4" ' + (editable ? "" : "disabled") + ">" + escapeHtml((sub.rules && sub.rules.text) || "") + "</textarea></div>" +
         '<div class="field"><label>Extra content text</label><textarea data-f="extrasText" rows="2" ' + (editable ? "" : "disabled") + ">" + escapeHtml((sub.extras && sub.extras.text) || "") + "</textarea></div>" +

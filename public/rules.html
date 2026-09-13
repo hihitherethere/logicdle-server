@@ -89,7 +89,7 @@
         var stamp = document.getElementById("day-stamp");
         stamp.hidden = false;
         stamp.className = "stamp stamp-solved";
-        continueBtn.textContent = "Play again →";
+        continueBtn.textContent = "View →";
       }
     })
     .catch(function (err) {
@@ -109,6 +109,8 @@
           "play:" + puzzleId,
           JSON.stringify({
             penpaShare: res.penpaShare,
+            textPuzzle: res.textPuzzle,
+            hasTextAnswer: res.hasTextAnswer,
             successMessage: res.successMessage,
             startedAt: res.startedAt,
             alreadySolved: res.alreadySolved,
