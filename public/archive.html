@@ -15,7 +15,7 @@
   <header class="site-header">
     <div>
       <p class="site-title"><a href="/index.html">Logicdle</a></p>
-      <p class="site-tagline">One puzzle a day.</p>
+      <p class="site-tagline">Archive</p>
     </div>
     <nav class="site-nav" id="user-nav"></nav>
   </header>
@@ -90,7 +90,7 @@
       intro.textContent = "No puzzles have been released yet — check back soon.";
       return;
     }
-    intro.textContent = "Solved puzzles are stamped and show your time. Tap any puzzle to open its rules.";
+    intro.textContent = "Solved puzzles are stamped and show your time.";
     controls.hidden = false;
     render();
   }).catch(function (err) {

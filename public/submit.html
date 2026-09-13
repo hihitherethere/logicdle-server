@@ -15,7 +15,7 @@
   <header class="site-header">
     <div>
       <p class="site-title"><a href="/index.html">Logicdle</a></p>
-      <p class="site-tagline">One puzzle a day.</p>
+      <p class="site-tagline">Submit Puzzle</p>
     </div>
     <nav class="site-nav" id="user-nav"></nav>
   </header>
@@ -38,11 +38,11 @@
       <form class="auth-form" id="submit-form">
         <div class="field">
           <label for="f-title">Title</label>
-          <input id="f-title" required placeholder="Fillomino No. 42">
+          <input id="f-title" required placeholder="Nurikabe">
         </div>
         <div class="field">
           <label for="f-type">Puzzle type</label>
-          <input id="f-type" required placeholder="Fillomino">
+          <input id="f-type" required placeholder="Classic, Twist, Word, Custom">
         </div>
         <div class="field">
           <label>Difficulty</label>
@@ -60,20 +60,20 @@
           <input id="f-author" required>
         </div>
         <div class="field">
-          <label for="f-share">Penpa share string (optional if you provide an answer below instead)</label>
-          <textarea id="f-share" rows="3" placeholder="Everything after the &quot;#&quot; in penpa's URL with answer check"></textarea>
+          <label for="f-share">Penpa share string (optional if you use the answer-verification field below instead)</label>
+          <textarea id="f-share" rows="3" placeholder="Everything after the &quot;#&quot; in penpa's &quot;URL with answer check&quot; link"></textarea>
         </div>
         <div class="field">
-          <label for="f-answer">Correct answer (optional if you provide a Penpa link above) — for word/competition-style puzzles checked by typed answer instead of a grid</label>
+          <label for="f-answer">Correct answer (optional) — for word/competition-style puzzles checked by typed answer instead of a grid</label>
           <input id="f-answer" placeholder="e.g. RIVERBANK">
         </div>
         <div class="field">
-          <label for="f-success">Success message (only used if you provided a Penpa link)</label>
+          <label for="f-success">Success message (only used if you provided a Penpa link, DON'T CHANGE)</label>
           <input id="f-success" value="Congratulations">
         </div>
         <div class="field">
-          <label for="f-extras">Extra content (shown above the puzzle)</label>
-          <textarea id="f-extras" rows="3"></textarea>
+          <label for="f-extras">Extra content (shown ABOVE the puzzle on the solve page)</label>
+          <textarea id="f-extras" rows="3" placeholder="Optional note or context for this puzzle"></textarea>
         </div>
         <div class="field">
           <label for="f-extras-image">Extra content images</label>
@@ -81,7 +81,7 @@
           <div class="thumb-row" id="extras-thumb-row"></div>
         </div>
         <div class="field">
-          <label for="f-rules">Rules text</label>
+          <label for="f-rules">Rules text (shown BELOW the puzzle on the solve page)</label>
           <textarea id="f-rules" rows="6" placeholder="Shade some cells so that..."></textarea>
         </div>
         <div class="field">
