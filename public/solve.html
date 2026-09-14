@@ -84,6 +84,7 @@
 <script src="/js/nav.js"></script>
 <script src="/js/solve-detect.js"></script>
 <script src="/js/star-picker.js"></script>
+<script src="/js/rich-text.js"></script>
 <script>
 (function () {
   var puzzleId = new URLSearchParams(location.search).get("puzzle");
@@ -136,7 +137,7 @@
   // ---- rendering rules / extras -----------------------------------------
   function renderContentBlock(bodyEl, imagesEl, content) {
     var text = (content && content.text) || "";
-    bodyEl.textContent = text;
+    RichText.render(bodyEl, text);
     imagesEl.innerHTML = "";
     ((content && content.images) || []).forEach(function (src) {
       var img = document.createElement("img");

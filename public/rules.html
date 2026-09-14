@@ -50,6 +50,7 @@
 <script src="/js/api.js"></script>
 <script src="/js/nav.js"></script>
 <script src="/js/star-picker.js"></script>
+<script src="/js/rich-text.js"></script>
 <script>
 (function () {
   var params = new URLSearchParams(location.search);
@@ -75,7 +76,7 @@
       document.getElementById("meta-author").textContent = "by " + p.author;
 
       var rulesText = (p.rules && p.rules.text) || "No rules have been written for this puzzle yet — standard rules for the genre apply.";
-      document.getElementById("rules-body").textContent = rulesText;
+      RichText.render(document.getElementById("rules-body"), rulesText);
 
       var imagesEl = document.getElementById("rules-images");
       ((p.rules && p.rules.images) || []).forEach(function (src) {

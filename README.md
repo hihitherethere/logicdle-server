@@ -207,6 +207,17 @@ immediately to `/api/admin/images` and appears as a thumbnail; remove
 one by clicking the × on its thumbnail. Saving the puzzle stores the
 final list of image URLs alongside the corresponding text.
 
+**Links in rules/extras text**: both fields support clickable links —
+`[label](https://example.com)` for a labeled link, or just paste a bare
+URL and it's auto-linkified. This is deliberately NOT arbitrary HTML:
+`public/js/rich-text.js` HTML-escapes everything first and only ever
+constructs `<a>` tags itself (`target="_blank" rel="noopener noreferrer"`,
+`http(s)://` only — a `javascript:` link, for instance, is left as
+inert plain text rather than becoming clickable). This matters because
+rules/extras text isn't admin-only content — it also comes from regular
+user submissions (`routes/submissions.js`) before an admin ever reviews
+it, so it has to be safe to render without trusting the source.
+
 ### Getting a penpa link
 
 1. Build the puzzle in penpa-edit, Edit mode **Problem**.
@@ -421,6 +432,6 @@ public/leaderboard.html        one leaderboard's per-day results
 public/login.html, register.html
 public/admin/index.html, admin/js/admin.js       puzzle CRUD
 public/admin/submissions.html, admin/js/submissions.js   review/edit/accept/reject submissions
-public/js/api.js, nav.js, solve-detect.js, star-picker.js
+public/js/api.js, nav.js, solve-detect.js, star-picker.js, rich-text.js
 public/penpa-edit/             ← clone penpa-edit's docs/ folder here (see its own README)
 ```
