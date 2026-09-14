@@ -207,7 +207,7 @@ immediately to `/api/admin/images` and appears as a thumbnail; remove
 one by clicking the × on its thumbnail. Saving the puzzle stores the
 final list of image URLs alongside the corresponding text.
 
-### Getting a `penpaShare` string
+### Getting a penpa link
 
 1. Build the puzzle in penpa-edit, Edit mode **Problem**.
 2. Switch to Edit mode **Solution**, fill in the answer using the
@@ -217,8 +217,13 @@ final list of image URLs alongside the corresponding text.
    must exactly match the `successMessage` field in the admin form,
    since that's the text `solve-detect.js` watches for) → **Generate
    URL**.
-4. Copy everything **after the `#`** into the "Penpa share string"
-   field in the admin form.
+4. Copy the **whole generated URL** — including the `https://...`
+   part — and paste all of it into the "Penpa link" field in the admin
+   form. You don't need to trim it down yourself: `extractPenpaFragment()`
+   in `lib/penpa.js` strips everything up through the first `#`
+   server-side, on every write path (admin create/edit, submission
+   create/edit), so pasting the full URL and pasting just the bare
+   fragment both work — the fragment is all that's ever stored.
 
 ## Puzzle submissions
 

@@ -67,6 +67,7 @@
   <div class="solved-banner" id="solved-banner" hidden>
     <p id="banner-heading" style="margin: 0 0 6px; font-weight: 600; color: var(--correct);"></p>
     <p id="banner-time-line" style="margin: 0 0 4px;"></p>
+    <p id="banner-difficulty-line" style="margin: 0 0 4px;"></p>
     <p id="banner-streak-line" style="margin: 0 0 12px;"></p>
     <button class="btn" id="banner-copy-btn">Copy stats</button>
   </div>
@@ -86,6 +87,7 @@
 <script>
 (function () {
   var puzzleId = new URLSearchParams(location.search).get("puzzle");
+  var currentMeta = null; // set by begin(); showSolvedBanner reads it for the difficulty line
   var frameShell = document.getElementById("frame-shell");
   var loadingEl = document.getElementById("frame-loading");
   var timerEl = document.getElementById("timer");
@@ -101,6 +103,7 @@
   var solvedBanner = document.getElementById("solved-banner");
   var bannerHeading = document.getElementById("banner-heading");
   var bannerTimeLine = document.getElementById("banner-time-line");
+  var bannerDifficultyLine = document.getElementById("banner-difficulty-line");
   var bannerStreakLine = document.getElementById("banner-streak-line");
   var bannerCopyBtn = document.getElementById("banner-copy-btn");
 
@@ -180,21 +183,27 @@
 
   // ---- solved banner (inline, not a popup) --------------------------------
   function showSolvedBanner(data) {
-    bannerHeading.textContent = data.alreadyRecorded ? "Solved again!" : "Solved!";
-    bannerTimeLine.textContent = data.alreadyRecorded
+    bannerHeading.textContent = data.isRevisit ? "Solved!" : data.alreadyRecorded ? "Solved again!" : "Solved!";
+    bannerTimeLine.textContent = data.isRevisit
+      ? "Your recorded time: " + formatMs(data.completion.timeMs)
+      : data.alreadyRecorded
       ? "Your recorded time: " + formatMs(data.completion.timeMs) + " (this replay didn't change it)"
       : "Solved in " + formatMs(data.completion.timeMs);
-    bannerStreakLine.textContent = data.stats
+    var stars = currentMeta ? StarPicker.render(currentMeta.difficulty) : "";
+    bannerDifficultyLine.textContent = stars ? "Difficulty: " + stars : "";
+    bannerStreakLine.textContent = "";
+    /*bannerStreakLine.textContent = data.stats
       ? "🔥 " + data.stats.streak + " day streak · " + data.stats.totalSolved + " solved total"
-      : "";
+      : "";*/
     solvedBanner.hidden = false;
 
     bannerCopyBtn.onclick = function () {
       var lines = [
         "Logicdle — " + data.puzzleTitle + " (" + data.puzzleDate + ")",
-        "⏱ " + formatMs(data.completion.timeMs),
       ];
-      if (data.stats) lines.push("🔥 " + data.stats.streak + " day streak · " + data.stats.totalSolved + " solved total");
+      if (stars) lines.push("Difficulty: " + stars);
+      lines.push("Time: " + formatMs(data.completion.timeMs));
+      if (data.stats) lines.push("Streak: " + data.stats.streak + " days, Total solved: " + data.stats.totalSolved);
       var text = lines.join("\n");
       navigator.clipboard.writeText(text).then(function () {
         bannerCopyBtn.textContent = "Copied!";
@@ -242,6 +251,7 @@
   }
 
   function begin(meta, play) {
+    currentMeta = meta;
     document.getElementById("puzzle-subtitle").textContent = meta.title;
     document.getElementById("puzzle-title").textContent = meta.title;
     document.getElementById("meta-date").textContent = meta.date;
@@ -261,6 +271,13 @@
 
     if (play.alreadySolved) {
       solvedStamp.hidden = false;
+      showSolvedBanner({
+        isRevisit: true,
+        completion: { timeMs: play.timeMs },
+        puzzleTitle: meta.title,
+        puzzleDate: meta.date,
+        stats: play.stats || null,
+      });
     }
 
     // Viewing an already-solved puzzle still shows the actual board (or

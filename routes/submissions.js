@@ -7,6 +7,7 @@ const router = express.Router();
 
 const { withDb } = require("../lib/db");
 const { requireAuth } = require("../middleware/auth");
+const { extractPenpaFragment } = require("../lib/penpa");
 const asyncHandler = require("../lib/asyncHandler");
 
 // Every route here needs a signed-in user — there's no anonymous submission.
@@ -64,6 +65,7 @@ function validate(body) {
 // admin does, at accept-time (see routes/admin.js's /submissions/:id/accept).
 router.post("/", asyncHandler(async (req, res) => {
   const body = req.body || {};
+  if (typeof body.penpaShare === "string") body.penpaShare = extractPenpaFragment(body.penpaShare);
   const err = validate(body);
   if (err) return res.status(400).json({ error: err });
 

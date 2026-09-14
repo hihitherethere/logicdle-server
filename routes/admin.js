@@ -8,6 +8,7 @@ const router = express.Router();
 const { withDb } = require("../lib/db");
 const { requireAdmin } = require("../middleware/auth");
 const { todayStr, addDays } = require("../lib/dates");
+const { extractPenpaFragment } = require("../lib/penpa");
 const config = require("../config");
 const asyncHandler = require("../lib/asyncHandler");
 
@@ -103,6 +104,9 @@ function validate(body) {
 
 router.post("/puzzles", asyncHandler(async (req, res) => {
   const body = req.body || {};
+  // Admins paste the full penpa URL now, not a pre-trimmed fragment —
+  // strip everything up through the first "#" before validating/storing.
+  if (typeof body.penpaShare === "string") body.penpaShare = extractPenpaFragment(body.penpaShare);
   const err = validate(body);
   if (err) return res.status(400).json({ error: err });
 
@@ -138,6 +142,7 @@ router.post("/puzzles", asyncHandler(async (req, res) => {
 
 router.put("/puzzles/:id", asyncHandler(async (req, res) => {
   const body = req.body || {};
+  if (typeof body.penpaShare === "string") body.penpaShare = extractPenpaFragment(body.penpaShare);
   if (body.date && !/^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
     return res.status(400).json({ error: '"date" must be in YYYY-MM-DD form.' });
   }
@@ -228,6 +233,7 @@ router.get("/submissions", asyncHandler(async (req, res) => {
 
 router.put("/submissions/:id", asyncHandler(async (req, res) => {
   const body = req.body || {};
+  if (typeof body.penpaShare === "string") body.penpaShare = extractPenpaFragment(body.penpaShare);
   if (body.difficulty !== undefined && body.difficulty !== "") {
     const d = Number(body.difficulty);
     if (!Number.isInteger(d) || d < 1 || d > 5) {

@@ -186,6 +186,10 @@ router.post("/:id/play", asyncHandler(async (req, res) => {
       // So a replay of an already-solved puzzle can show "first solved in
       // M:SS" without the timer live-counting (that time is locked in).
       timeMs: completion ? completion.timeMs : null,
+      // Only needed when already solved (so revisiting can show the
+      // solved banner immediately, streak included) — cheap enough to
+      // just always compute rather than branch on it.
+      stats: computeUserStats(db, req.user.id),
     };
   });
 
