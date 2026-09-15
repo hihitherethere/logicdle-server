@@ -30,14 +30,12 @@
       <a href="/admin/submissions.html">Submissions</a>
     </div>
 
-    <div class="admin-grid">
+    <div class="admin-card" style="margin-bottom: 32px;">
+      <h2 id="form-title">New puzzle</h2>
+      <form class="auth-form" id="puzzle-form">
+        <p class="form-note" id="editing-id-note" hidden></p>
 
-      <div class="admin-card">
-        <h2 id="form-title">New puzzle</h2>
-        <form class="auth-form" id="puzzle-form">
-          <p class="form-note" id="editing-id-note" hidden></p>
-
-          <div class="field">
+        <div class="field">
             <label>Release date</label>
             <div style="display:flex; gap:16px; font-family: var(--font-body); font-size: 0.9rem; margin-bottom: 4px;">
               <label style="display:flex; align-items:center; gap:6px; text-transform:none; letter-spacing:normal; font-size:0.9rem;">
@@ -112,11 +110,18 @@
         </form>
       </div>
 
-      <div class="admin-card">
-        <h2>Puzzles</h2>
-        <div class="puzzle-list" id="puzzle-list"></div>
+    <div class="admin-card">
+      <h2>Manage puzzles</h2>
+      <div class="archive-controls" style="margin-bottom: 12px;">
+        <input type="search" id="puzzle-search" placeholder="Search title or type…">
       </div>
-
+      <p class="archive-count" id="puzzle-count"></p>
+      <div class="puzzle-list" id="puzzle-list"></div>
+      <div class="archive-pagination" id="puzzle-pagination" hidden>
+        <button class="btn" id="puzzle-prev-btn">← Prev</button>
+        <span class="page-info" id="puzzle-page-info"></span>
+        <button class="btn" id="puzzle-next-btn">Next →</button>
+      </div>
     </div>
   </div>
 

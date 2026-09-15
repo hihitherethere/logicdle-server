@@ -192,10 +192,9 @@
       : "Solved in " + formatMs(data.completion.timeMs);
     var stars = currentMeta ? StarPicker.render(currentMeta.difficulty) : "";
     bannerDifficultyLine.textContent = stars ? "Difficulty: " + stars : "";
-    bannerStreakLine.textContent = "";
-    /*bannerStreakLine.textContent = data.stats
+    bannerStreakLine.textContent = data.stats
       ? "🔥 " + data.stats.streak + " day streak · " + data.stats.totalSolved + " solved total"
-      : "";*/
+      : "";
     solvedBanner.hidden = false;
 
     bannerCopyBtn.onclick = function () {
@@ -204,7 +203,8 @@
       ];
       if (stars) lines.push("Difficulty: " + stars);
       lines.push("Time: " + formatMs(data.completion.timeMs));
-      if (data.stats) lines.push("Streak: " + data.stats.streak + " days, Total solved: " + data.stats.totalSolved);
+      // if (data.stats) lines.push("Streak: " + data.stats.streak + " days, Total solved: " + data.stats.totalSolved);
+      lines.push("Play it yourself: https://logicdle-server.vercel.app/index.html");
       var text = lines.join("\n");
       navigator.clipboard.writeText(text).then(function () {
         bannerCopyBtn.textContent = "Copied!";

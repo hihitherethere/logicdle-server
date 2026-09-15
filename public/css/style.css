@@ -297,7 +297,7 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible, input:focus-vis
   border: 0; width: 18px; height: 18px; border-radius: 50%; font-size: 0.7rem; line-height: 1; cursor: pointer;
 }
 
-.puzzle-list { display: flex; flex-direction: column; gap: 10px; max-height: 70vh; overflow-y: auto; }
+.puzzle-list { display: flex; flex-direction: column; gap: 10px; }
 .puzzle-row {
   display: flex; justify-content: space-between; align-items: center; gap: 10px;
   padding: 10px 12px; border: 1px solid #e3ded1; border-radius: 3px; background: #fff;
