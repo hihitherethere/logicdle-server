@@ -115,24 +115,27 @@ client-visible timer is just a display, not the source of truth.
 ## The flow
 
 1. **Home page** (`index.html`) — "Play today's puzzle" and "Browse the
-   archive."
+   archive." No account needed for either.
 2. **Rules page** (`rules.html?puzzle=<id>`) — title, metadata, the
    rules text and any rule images you uploaded in the admin panel, and
    a **Continue** button.
-3. Continue calls `POST /api/puzzles/:id/play`, which checks you're
-   signed in and the puzzle is released, then hands back whichever
-   content mode the puzzle uses (see "Three ways to present a puzzle"
-   below) and starts the server-side timer.
+3. Continue calls `POST /api/puzzles/:id/play`, which checks the puzzle
+   is released, then hands back whichever content mode the puzzle uses
+   (see "Three ways to present a puzzle" below) and starts the
+   server-side timer. No sign-in required — see "Playing without an
+   account" below for how progress is tracked either way.
 4. **Solve page** (`solve.html?puzzle=<id>`) — top to bottom: any
    **extra content** you added for this puzzle (text/images, shown only
    if you added any), then the puzzle itself in whichever mode applies
-   (penpa iframe with a **Reset board** button, an answer box, or plain
-   text with a manual **I've solved it** button), and finally the
-   **rules** again underneath for reference while solving. On success it
-   posts to `/complete` (or the answer is verified via `/answer`) and
-   shows an inline **Solved** banner with a **Copy stats** button that
-   copies a short share-ready summary (puzzle, time, streak) to the
-   clipboard.
+   (penpa iframe, an answer box, or plain text), and finally the
+   **rules** again underneath for reference while solving. Solving is
+   detected automatically (penpa's own success message, or a correct
+   text answer) and posts to `/complete` or `/answer`, which shows an
+   inline **Solved** banner with a **Copy stats** button that copies a
+   short share-ready summary (puzzle, time, streak) to the clipboard.
+   Revisiting an already-solved puzzle shows that same banner again
+   immediately, with your original recorded time rather than a
+   live-counting timer.
 5. **Archive page** (`archive.html`) — every released puzzle, searchable
    by title/type/author, filterable by difficulty, sortable (newest,
    oldest, most/least solved, fastest/slowest average time), paginated
@@ -142,8 +145,46 @@ client-visible timer is just a display, not the source of truth.
    not even to build the search index.
 6. **Submit a puzzle** (`submit.html`) — any signed-in user can propose
    a puzzle for an admin to review (see "Puzzle submissions" below).
+   Submitting still requires an account, unlike playing.
 7. **Leaderboards** (`leaderboards.html`) — create or join a private
-   group leaderboard (see "Leaderboards" below).
+   group leaderboard (see "Leaderboards" below). Also still requires an
+   account, since a leaderboard is inherently about attributing results
+   to identifiable people.
+
+## Playing without an account
+
+Solving puzzles — starting, completing, streaks, "already solved"
+status in the archive — never requires an account. `middleware/anon.js`
+gives every visitor a random `anon_id` cookie (httpOnly, ~1 year) the
+first time they hit the server if they don't already have one or a
+session; `lib/actor.js`'s `actorId(req)` is what every puzzle route
+actually keys progress by — a real user's id if signed in, otherwise
+`"anon:" + anonId`. Nothing about `db.starts` or `db.completions`
+distinguishes an anonymous solver from a signed-in one beyond that
+string, so every existing feature (streaks, solve stats, revisiting a
+solved puzzle) works identically either way.
+
+**Registering or logging in transfers that progress into the
+account.** `transferAnonProgress()` in `routes/auth.js` runs right
+after both `/register` and `/login` succeed: every start/completion
+under the current `anon_id` gets reassigned to the now-authenticated
+user. If the account already has its own record for a given puzzle
+(e.g. solved once already on another device), the anonymous one is
+merged rather than overwritten — whichever of the two actually happened
+earlier wins as the canonical time, and the redundant record is
+dropped, so there's never a duplicate completion for the same puzzle.
+The `anon_id` cookie itself isn't cleared afterward, so this keeps
+working across repeated logout → solve anonymously → log back in
+cycles on the same browser, not just a one-time transfer at signup.
+
+**Known limitation, not something this tries to fully solve:**
+anonymous identity is just a cookie. Clearing cookies (or using a
+different browser/device) starts a fresh anonymous identity with no
+memory of prior solves — there's no way around that without requiring
+accounts, which defeats the point of this feature. For a personal or
+small-community puzzle site this is a reasonable, low-stakes tradeoff;
+it's not meant to prevent someone determined to replay a puzzle to
+reset their own streak.
 
 ## Three ways to present a puzzle
 
@@ -415,13 +456,16 @@ config.js                      env-driven config
 lib/db.js                      Redis-backed datastore (Upstash)
 lib/asyncHandler.js            wraps async route handlers so rejected promises reach the error middleware
 lib/auth.js                    password hashing, session tokens
+lib/actor.js                   actorId(req) — user id or "anon:..." id, used by every puzzle-progress route
 lib/dates.js                   server-side "what day is it" (release gate) + addDays()
+lib/penpa.js                   extractPenpaFragment() — strips a pasted full penpa URL down to its fragment
 middleware/auth.js             session lookup, requireAuth / requireAdmin
-routes/auth.js                 register / login / logout / me
-routes/puzzles.js              today / archive (search/sort/paginate client-side, solve stats server-computed) / rules / play / complete / answer
+middleware/anon.js             assigns the anon_id cookie so signed-out visitors can play
+routes/auth.js                 register / login / logout / me / transferAnonProgress() on register+login
+routes/puzzles.js              today / archive (search/sort/paginate client-side, solve stats server-computed) / rules / play / complete / answer — no login required
 routes/admin.js                puzzle CRUD (random id, auto/manual date, star difficulty, 3 content modes), image upload (Vercel Blob), submission review
-routes/submissions.js          user-facing puzzle submission: create / list own / comment / image upload
-routes/leaderboards.js         create / join / per-day results (only once a day has passed) / leave
+routes/submissions.js          user-facing puzzle submission: create / list own / comment / image upload (still requires login)
+routes/leaderboards.js         create / join / per-day results (only once a day has passed) / leave (still requires login)
 public/index.html              home
 public/archive.html            archive — search, star-difficulty filter, sort, pagination
 public/rules.html              rules + Continue

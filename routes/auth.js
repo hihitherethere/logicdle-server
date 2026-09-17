@@ -20,6 +20,54 @@ function publicUser(user) {
   return { username: user.username, isAdmin: !!user.isAdmin };
 }
 
+/**
+ * Folds progress recorded anonymously (under "anon:<anonId>", from
+ * playing puzzles with no account — see lib/actor.js) into a real
+ * account, called right after both register and login succeed. The
+ * anon_id cookie isn't cleared afterward, so this keeps working across
+ * repeated logout/solve-anonymously/login-again cycles on the same
+ * browser, not just a one-time transfer at signup.
+ *
+ * For a puzzle the user already has a start/completion under their real
+ * account (e.g. they'd played it once on another device while signed
+ * in), the anonymous record is dropped rather than overwriting it — but
+ * its data isn't just discarded: whichever of the two is EARLIER wins,
+ * so a genuinely earlier anonymous solve/start still ends up as the
+ * account's canonical time.
+ */
+function transferAnonProgress(db, anonId, userId) {
+  if (!anonId) return;
+  const anonActorId = "anon:" + anonId;
+
+  db.starts = db.starts.filter((s) => {
+    if (s.userId !== anonActorId) return true;
+    const existing = db.starts.find((s2) => s2.userId === userId && s2.puzzleId === s.puzzleId);
+    if (!existing) {
+      s.userId = userId;
+      return true;
+    }
+    if (new Date(s.startedAt) < new Date(existing.startedAt)) {
+      existing.startedAt = s.startedAt;
+    }
+    return false; // drop the now-redundant anonymous record
+  });
+
+  db.completions = db.completions.filter((c) => {
+    if (c.userId !== anonActorId) return true;
+    const existing = db.completions.find((c2) => c2.userId === userId && c2.puzzleId === c.puzzleId);
+    if (!existing) {
+      c.userId = userId;
+      return true;
+    }
+    if (new Date(c.solvedAt) < new Date(existing.solvedAt)) {
+      existing.solvedAt = c.solvedAt;
+      existing.timeMs = c.timeMs;
+      existing.auto = c.auto;
+    }
+    return false;
+  });
+}
+
 router.post("/register", asyncHandler(async (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !/^[a-zA-Z0-9_\-.]{3,32}$/.test(username)) {
@@ -45,6 +93,8 @@ router.post("/register", asyncHandler(async (req, res) => {
     const token = newSessionToken();
     db.sessions[token] = { userId: user.id, createdAt: new Date().toISOString() };
 
+    transferAnonProgress(db, req.anonId, user.id);
+
     return { token, user };
   });
 
@@ -62,6 +112,9 @@ router.post("/login", asyncHandler(async (req, res) => {
     }
     const token = newSessionToken();
     db.sessions[token] = { userId: user.id, createdAt: new Date().toISOString() };
+
+    transferAnonProgress(db, req.anonId, user.id);
+
     return { token, user };
   });
 

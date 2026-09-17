@@ -42,6 +42,10 @@
         <button class="btn btn-primary btn-big" id="continue-btn">Continue →</button>
       </div>
       <p class="form-error" id="continue-error"></p>
+      <p class="form-note" id="guest-note" hidden style="margin-top: 10px;">
+        Playing as a guest — your progress is saved to this browser.
+        <a href="/register.html">Create an account</a> to keep it permanently.
+      </p>
     </div>
   </div>
 
@@ -64,6 +68,10 @@
     continueBtn.hidden = true;
     return;
   }
+
+  Api.get("/api/auth/me").then(function (res) {
+    if (!res.user) document.getElementById("guest-note").hidden = false;
+  });
 
   Api.get("/api/puzzles/" + encodeURIComponent(puzzleId))
     .then(function (res) {

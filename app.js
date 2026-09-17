@@ -4,6 +4,7 @@ const path = require("path");
 
 const config = require("./config");
 const { attachUser } = require("./middleware/auth");
+const { attachAnonId } = require("./middleware/anon");
 const asyncHandler = require("./lib/asyncHandler");
 const authRoutes = require("./routes/auth");
 const puzzleRoutes = require("./routes/puzzles");
@@ -15,6 +16,7 @@ const app = express();
 
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser(config.COOKIE_SECRET));
+app.use(attachAnonId); // sync — assigns an anonymous identity cookie if there isn't one yet
 app.use(asyncHandler(attachUser)); // now async — reads from Redis
 
 app.use("/api/auth", authRoutes);
